@@ -13,8 +13,9 @@ units:
   suite.
 - IT audit agents that run continuous, ongoing audits against compliance and
   security standards (ISO, SOC, GDPR, SOX 1, SOX 2, and others) - automating
-  work that previously required about three dedicated audit positions while
-  improving audit coverage and consistency.
+  recurring audit work that previously took roughly three full-time roles' worth
+  of manual effort, freeing the team for higher-value work while improving audit
+  coverage and consistency.
 
 Earlier AI-assisted triage and deflection improved First Contact Resolution
 from 65% to 80%. Also owned endpoint management (Intune, SCCM, Jamf, BigFix)
