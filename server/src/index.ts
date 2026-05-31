@@ -3,7 +3,9 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import Anthropic from "@anthropic-ai/sdk";
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
+import fastifyStatic from "@fastify/static";
 import { loadSpec } from "./spec.js";
 import { buildSystemPrompt } from "./prompt.js";
 import { createGuard } from "./guard.js";
@@ -82,6 +84,22 @@ app.post("/api/chat", async (req, reply) => {
     reply.raw.end();
   }
 });
+
+// In production, serve the built web app from this same service (single origin).
+const WEB_DIST = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../web/dist",
+);
+
+if (fs.existsSync(WEB_DIST)) {
+  await app.register(fastifyStatic, { root: WEB_DIST });
+  app.setNotFoundHandler((req, reply) => {
+    if (req.method === "GET" && !req.url.startsWith("/api")) {
+      return reply.sendFile("index.html");
+    }
+    reply.code(404).send({ error: "Not found" });
+  });
+}
 
 const port = Number(process.env.PORT ?? 3000);
 await app.listen({ port, host: "0.0.0.0" });

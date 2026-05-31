@@ -1,23 +1,10 @@
+# Single Node service: the API also serves the built web app (one origin, one URL).
 services:
   - type: web
-    name: shaykopi-interview-bot-api
+    name: shaykopi-interview-bot
     runtime: node
-    rootDir: server
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+    buildCommand: npm install && npm run build -w @interview-bot/web && npm run build -w @interview-bot/server
+    startCommand: npm run start -w @interview-bot/server
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: WEB_ORIGIN
-        value: "*"
-
-  - type: web
-    name: shaykopi-interview-bot
-    runtime: static
-    rootDir: web
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://shaykopi-interview-bot-api.onrender.com/api/*

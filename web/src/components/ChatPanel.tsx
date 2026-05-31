@@ -6,7 +6,6 @@ interface Props {
   messages: ChatMessage[];
   busy: boolean;
   onSend: (text: string) => void;
-  contactEmail: string;
 }
 
 const FOLLOWUPS: { label: string; q: string }[] = [
@@ -44,13 +43,9 @@ function Thinking() {
   );
 }
 
-function FollowUps({
-  onSend,
-  email,
-}: {
-  onSend: (q: string) => void;
-  email: string;
-}) {
+const BOOKING_URL = "https://calendly.com/shaykopi/1st-interview-with-shay";
+
+function FollowUps({ onSend }: { onSend: (q: string) => void }) {
   return (
     <div className="mt-1 flex flex-wrap gap-2 pl-[2.875rem] animate-fade-up">
       {FOLLOWUPS.map((f) => (
@@ -63,9 +58,9 @@ function FollowUps({
         </button>
       ))}
       <a
-        href={`mailto:${email}?subject=${encodeURIComponent(
-          "Interview with Shay Kopilevich",
-        )}`}
+        href={BOOKING_URL}
+        target="_blank"
+        rel="noopener noreferrer"
         className="rounded-full border border-accent/30 bg-accent/10 px-3.5 py-1.5 text-[0.8rem] font-medium text-accent transition-all duration-200 hover:bg-accent/20"
       >
         Book an interview →
@@ -74,12 +69,7 @@ function FollowUps({
   );
 }
 
-export default function ChatPanel({
-  messages,
-  busy,
-  onSend,
-  contactEmail,
-}: Props) {
+export default function ChatPanel({ messages, busy, onSend }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -121,7 +111,7 @@ export default function ChatPanel({
         );
       })}
 
-      {showFollowups && <FollowUps onSend={onSend} email={contactEmail} />}
+      {showFollowups && <FollowUps onSend={onSend} />}
 
       <div ref={endRef} />
     </div>
