@@ -21,12 +21,12 @@ function Header() {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-pulse-dot rounded-full bg-accent" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+      <div className="flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1.5">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent/50" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-accent shadow-[0_0_8px_1px] shadow-accent/70" />
         </span>
-        <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-white/55">
+        <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-accent/90">
           Grounded
         </span>
       </div>
@@ -107,7 +107,7 @@ export default function App() {
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-3xl flex-col px-5 sm:px-8">
         <Header />
 
-        <main className="flex flex-1 flex-col">
+        <main className={"flex flex-1 flex-col " + (started ? "justify-end" : "")}>
           {started ? (
             <ChatPanel messages={messages} busy={busy} />
           ) : (
