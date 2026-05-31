@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: interview-bot-api
+    name: shaykopi-interview-bot-api
     runtime: node
     rootDir: server
     buildCommand: npm install && npm run build
@@ -9,10 +9,10 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: WEB_ORIGIN
-        sync: false
+        value: "*"
 
   - type: web
-    name: interview-bot-web
+    name: shaykopi-interview-bot
     runtime: static
     rootDir: web
     buildCommand: npm install && npm run build
@@ -20,4 +20,4 @@ services:
     routes:
       - type: rewrite
         source: /api/*
-        destination: https://interview-bot-api.onrender.com/api/*
+        destination: https://shaykopi-interview-bot-api.onrender.com/api/*
