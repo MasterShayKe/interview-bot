@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSystemPrompt } from "../src/prompt.js";
+import { buildSystemPrompt, buildFitSystemPrompt } from "../src/prompt.js";
 import type { Spec } from "../src/spec.js";
 
 const spec: Spec = {
@@ -38,5 +38,21 @@ describe("buildSystemPrompt", () => {
   it("speaks ABOUT the subject in third person (no impersonation directive)", () => {
     const p = buildSystemPrompt(spec);
     expect(p).toMatch(/third person/i);
+  });
+});
+
+describe("buildFitSystemPrompt", () => {
+  it("embeds every fact file so the analysis stays grounded", () => {
+    const p = buildFitSystemPrompt(spec);
+    expect(p).toContain("Test Person is an engineer.");
+    expect(p).toContain("Built a demo app.");
+  });
+
+  it("instructs the required report structure and honest gaps", () => {
+    const p = buildFitSystemPrompt(spec);
+    expect(p).toContain("**Verdict:**");
+    expect(p).toContain("**Where he matches**");
+    expect(p).toContain("**Honest gaps**");
+    expect(p).toMatch(/never invent/i);
   });
 });

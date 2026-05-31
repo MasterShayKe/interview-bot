@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
+type CommandAction = "clear" | "fit";
+
 interface Command {
   cmd: string;
   label: string;
   question: string | null;
+  action?: CommandAction;
 }
 
 const COMMANDS: Command[] = [
@@ -11,16 +14,18 @@ const COMMANDS: Command[] = [
   { cmd: "/cv", label: "Walk through Shay's career", question: "Walk me through Shay's work history and career progression." },
   { cmd: "/projects", label: "Show main AI projects", question: "What are Shay's main AI projects? Give me an overview." },
   { cmd: "/about", label: "Shay in a nutshell", question: "Give me a quick overview of who Shay is and what makes him stand out." },
-  { cmd: "/clear", label: "Clear conversation", question: null },
+  { cmd: "/fit", label: "Analyze fit for a job description", question: null, action: "fit" },
+  { cmd: "/clear", label: "Clear conversation", question: null, action: "clear" },
 ];
 
 interface Props {
   busy: boolean;
   onSend: (text: string) => void;
   onClear: () => void;
+  onFit: () => void;
 }
 
-export default function Composer({ busy, onSend, onClear }: Props) {
+export default function Composer({ busy, onSend, onClear, onFit }: Props) {
   const [input, setInput] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -37,10 +42,12 @@ export default function Composer({ busy, onSend, onClear }: Props) {
 
   function runCommand(cmd: Command) {
     setInput("");
-    if (cmd.question) {
-      onSend(cmd.question);
-    } else {
+    if (cmd.action === "fit") {
+      onFit();
+    } else if (cmd.action === "clear") {
       onClear();
+    } else if (cmd.question) {
+      onSend(cmd.question);
     }
   }
 

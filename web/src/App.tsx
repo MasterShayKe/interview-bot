@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchSpec, streamChat, type ChatMessage, type TokenUsage } from "./lib/api.js";
+import { fetchSpec, streamChat, streamFit, type ChatMessage, type TokenUsage } from "./lib/api.js";
 import { collectClientContext } from "./lib/device.js";
 import BootSequence from "./components/BootSequence.js";
 import IntroCard from "./components/IntroCard.js";
 import ChatPanel from "./components/ChatPanel.js";
 import Composer from "./components/Composer.js";
 import SpecDialog from "./components/SpecDialog.js";
+import FitDialog from "./components/FitDialog.js";
 import { getSessionDuration } from "./lib/device.js";
 
 interface SessionStats {
@@ -84,6 +85,7 @@ export default function App() {
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
   const [tokenUsage, setTokenUsage] = useState<Record<number, TokenUsage>>({});
   const [showSpec, setShowSpec] = useState(false);
+  const [showFit, setShowFit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [bootDone, setBootDone] = useState(false);
 
@@ -160,6 +162,51 @@ export default function App() {
     }
   }
 
+  async function onAnalyzeFit(jobDescription: string) {
+    if (busy) return;
+    setBusy(true);
+    setDynamicSuggestions([]);
+    const next: ChatMessage[] = [
+      ...messages,
+      { role: "user", content: "Analyze Shay's fit for a job description I pasted." },
+    ];
+    const assistantIdx = next.length;
+    setMessages([...next, { role: "assistant", content: "" }]);
+    try {
+      const ctx = initialClientContext;
+      const sessionDurationSeconds = getSessionDuration(ctx.sessionStartedAt);
+      await streamFit({
+        jobDescription,
+        clientContext: ctx,
+        sessionDurationSeconds,
+        onDelta: (delta) => {
+          setMessages((cur) => {
+            const copy = [...cur];
+            copy[copy.length - 1] = {
+              role: "assistant",
+              content: copy[copy.length - 1].content + delta,
+            };
+            return copy;
+          });
+        },
+        onDone: (usage) => {
+          setTokenUsage((prev) => ({ ...prev, [assistantIdx]: usage }));
+        },
+      });
+    } catch (err) {
+      setMessages((cur) => {
+        const copy = [...cur];
+        copy[copy.length - 1] = {
+          role: "assistant",
+          content: (err as Error).message,
+        };
+        return copy;
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const started = messages.length > 0;
 
   return (
@@ -186,18 +233,33 @@ export default function App() {
               dynamicSuggestions={dynamicSuggestions}
             />
           ) : (
-            <IntroCard suggestions={suggestions} onPick={onSend} />
+            <IntroCard
+              suggestions={suggestions}
+              onPick={onSend}
+              onOpenFit={() => setShowFit(true)}
+            />
           )}
         </main>
 
         <div className="sticky bottom-0 z-20 -mx-5 bg-gradient-to-t from-ink via-ink/95 to-transparent px-5 pb-3 pt-8 sm:-mx-8 sm:px-8">
-          <Composer busy={busy} onSend={onSend} onClear={onClear} />
+          <Composer
+            busy={busy}
+            onSend={onSend}
+            onClear={onClear}
+            onFit={() => setShowFit(true)}
+          />
         </div>
 
         <Footer onOpenSpec={() => setShowSpec(true)} stats={sessionStats} />
       </div>
 
       {showSpec && <SpecDialog onClose={() => setShowSpec(false)} />}
+      {showFit && (
+        <FitDialog
+          onClose={() => setShowFit(false)}
+          onAnalyze={onAnalyzeFit}
+        />
+      )}
     </>
   );
 }
