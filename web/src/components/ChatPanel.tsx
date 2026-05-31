@@ -1,18 +1,22 @@
 import { useEffect, useRef } from "react";
-import type { ChatMessage } from "../lib/api.js";
+import type { ChatMessage, TokenUsage } from "../lib/api.js";
 import Markdown from "./Markdown.js";
 
 interface Props {
   messages: ChatMessage[];
   busy: boolean;
   onSend: (text: string) => void;
+  tokenUsage?: Record<number, TokenUsage>;
+  dynamicSuggestions?: string[];
 }
 
-const FOLLOWUPS: { label: string; q: string }[] = [
+const STATIC_FOLLOWUPS: { label: string; q: string }[] = [
   { label: "Show AI projects", q: "Show me Shay's AI projects." },
   { label: "Explain NiCE impact", q: "Explain Shay's impact at NiCE." },
   { label: "Why hire Shay?", q: "Why should we hire Shay?" },
 ];
+
+const BOOKING_URL = "https://calendly.com/shaykopi/1st-interview-with-shay";
 
 function Avatar() {
   return (
@@ -43,12 +47,58 @@ function Thinking() {
   );
 }
 
-const BOOKING_URL = "https://calendly.com/shaykopi/1st-interview-with-shay";
+function TokenBadge({ usage }: { usage: TokenUsage }) {
+  const cacheHit = usage.cacheReadTokens > 0;
+  const totalTokens =
+    usage.inputTokens +
+    usage.outputTokens +
+    usage.cacheCreationTokens +
+    usage.cacheReadTokens;
 
-function FollowUps({ onSend }: { onSend: (q: string) => void }) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 pl-[2.875rem]">
+      <span
+        className={
+          "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[0.6rem] uppercase tracking-[0.12em] " +
+          (cacheHit
+            ? "border-accent/25 bg-accent/[0.06] text-accent/70"
+            : "border-white/10 bg-white/[0.02] text-white/35")
+        }
+      >
+        <span
+          className={
+            "h-1.5 w-1.5 rounded-full " +
+            (cacheHit ? "bg-accent/70" : "bg-white/25")
+          }
+        />
+        {cacheHit ? "cache hit" : "cache miss"}
+      </span>
+
+      {cacheHit && (
+        <span className="font-mono text-[0.6rem] text-white/25">
+          {usage.cacheReadTokens.toLocaleString()} tokens from cache
+        </span>
+      )}
+
+      <span className="font-mono text-[0.6rem] text-white/20">
+        {totalTokens.toLocaleString()} total
+      </span>
+    </div>
+  );
+}
+
+function FollowUps({
+  onSend,
+  items,
+  showBooking,
+}: {
+  onSend: (q: string) => void;
+  items: { label: string; q: string }[];
+  showBooking: boolean;
+}) {
   return (
     <div className="mt-1 flex flex-wrap gap-2 pl-[2.875rem] animate-fade-up">
-      {FOLLOWUPS.map((f) => (
+      {items.map((f) => (
         <button
           key={f.label}
           onClick={() => onSend(f.q)}
@@ -57,19 +107,27 @@ function FollowUps({ onSend }: { onSend: (q: string) => void }) {
           {f.label}
         </button>
       ))}
-      <a
-        href={BOOKING_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="rounded-full border border-accent/30 bg-accent/10 px-3.5 py-1.5 text-[0.8rem] font-medium text-accent transition-all duration-200 hover:bg-accent/20"
-      >
-        Book an interview →
-      </a>
+      {showBooking && (
+        <a
+          href={BOOKING_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full border border-accent/30 bg-accent/10 px-3.5 py-1.5 text-[0.8rem] font-medium text-accent transition-all duration-200 hover:bg-accent/20"
+        >
+          Book an interview →
+        </a>
+      )}
     </div>
   );
 }
 
-export default function ChatPanel({ messages, busy, onSend }: Props) {
+export default function ChatPanel({
+  messages,
+  busy,
+  onSend,
+  tokenUsage = {},
+  dynamicSuggestions = [],
+}: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -79,11 +137,22 @@ export default function ChatPanel({ messages, busy, onSend }: Props) {
   const showFollowups =
     !busy && last?.role === "assistant" && last.content.length > 0;
 
+  const completedAssistantCount = messages.filter(
+    (m) => m.role === "assistant" && m.content.length > 0,
+  ).length;
+  const showBooking = completedAssistantCount >= 2;
+
+  const followupItems =
+    dynamicSuggestions.length > 0
+      ? dynamicSuggestions.map((q) => ({ label: q, q }))
+      : STATIC_FOLLOWUPS;
+
   return (
     <div className="flex flex-col gap-7 py-4">
       {messages.map((m, i) => {
         const isLast = i === messages.length - 1;
         const streaming = isLast && m.role === "assistant" && busy;
+        const usage = tokenUsage[i];
 
         if (m.role === "user") {
           return (
@@ -99,19 +168,28 @@ export default function ChatPanel({ messages, busy, onSend }: Props) {
         }
 
         return (
-          <div key={i} className="flex gap-3.5 animate-fade-up">
-            <Avatar />
-            <div dir="auto" className="min-w-0 flex-1 pt-0.5">
-              {m.content ? <Markdown>{m.content}</Markdown> : <Thinking />}
-              {streaming && m.content && (
-                <span className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[0.18em] animate-blink bg-accent align-middle" />
-              )}
+          <div key={i} className="flex flex-col animate-fade-up">
+            <div className="flex gap-3.5">
+              <Avatar />
+              <div dir="auto" className="min-w-0 flex-1 pt-0.5">
+                {m.content ? <Markdown>{m.content}</Markdown> : <Thinking />}
+                {streaming && m.content && (
+                  <span className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[0.18em] animate-blink bg-accent align-middle" />
+                )}
+              </div>
             </div>
+            {usage && !streaming && <TokenBadge usage={usage} />}
           </div>
         );
       })}
 
-      {showFollowups && <FollowUps onSend={onSend} />}
+      {showFollowups && (
+        <FollowUps
+          onSend={onSend}
+          items={followupItems}
+          showBooking={showBooking}
+        />
+      )}
 
       <div ref={endRef} />
     </div>

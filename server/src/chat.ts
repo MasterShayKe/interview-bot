@@ -5,6 +5,13 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+}
+
 export interface StreamChatArgs {
   client: Anthropic;
   system: string;
@@ -16,8 +23,8 @@ export interface StreamChatArgs {
 
 const MODEL = "claude-sonnet-4-6";
 
-/** Streams a Claude response. Returns total tokens used (input + output). */
-export async function streamChat(args: StreamChatArgs): Promise<number> {
+/** Streams a Claude response. Returns token usage breakdown. */
+export async function streamChat(args: StreamChatArgs): Promise<TokenUsage> {
   const systemBlocks: Anthropic.Messages.TextBlockParam[] = [
     {
       type: "text",
@@ -41,10 +48,10 @@ export async function streamChat(args: StreamChatArgs): Promise<number> {
 
   const final = await stream.finalMessage();
   const u = final.usage;
-  return (
-    (u.input_tokens ?? 0) +
-    (u.output_tokens ?? 0) +
-    (u.cache_creation_input_tokens ?? 0) +
-    (u.cache_read_input_tokens ?? 0)
-  );
+  return {
+    inputTokens: u.input_tokens ?? 0,
+    outputTokens: u.output_tokens ?? 0,
+    cacheCreationTokens: u.cache_creation_input_tokens ?? 0,
+    cacheReadTokens: u.cache_read_input_tokens ?? 0,
+  };
 }

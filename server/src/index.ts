@@ -9,8 +9,9 @@ import fastifyStatic from "@fastify/static";
 import { loadSpec } from "./spec.js";
 import { buildSystemPrompt } from "./prompt.js";
 import { createGuard } from "./guard.js";
-import { streamChat, type ChatMessage } from "./chat.js";
+import { streamChat, type ChatMessage, type TokenUsage } from "./chat.js";
 import { buildVisitorContext, type ClientContext } from "./context.js";
+import type { Spec } from "./spec.js";
 
 const SPEC_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -29,6 +30,33 @@ const guard = createGuard({
 
 const MAX_OUTPUT_TOKENS = Number(process.env.MAX_OUTPUT_TOKENS ?? 800);
 const MAX_MESSAGES = 20;
+const SUGGESTIONS_MODEL = "claude-haiku-4-5-20251001";
+
+async function generateFollowUps(
+  anthropic: Anthropic,
+  messages: ChatMessage[],
+  persona: Spec["persona"],
+): Promise<string[]> {
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+  if (!lastUser || !lastAssistant) return [];
+
+  const result = await anthropic.messages.create({
+    model: SUGGESTIONS_MODEL,
+    max_tokens: 150,
+    system: `You generate follow-up questions for a chatbot about ${persona.subject_name}. Return ONLY a valid JSON array of exactly 3 short questions (under 8 words each). No markdown, no extra text.`,
+    messages: [
+      {
+        role: "user",
+        content: `Question asked: "${lastUser.content}"\nAnswer given: "${lastAssistant.content.slice(0, 400)}"\n\nGenerate 3 follow-up questions.`,
+      },
+    ],
+  });
+
+  const text = result.content[0].type === "text" ? result.content[0].text.trim() : "[]";
+  const parsed = JSON.parse(text);
+  return Array.isArray(parsed) ? parsed.slice(0, 3) : [];
+}
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: process.env.WEB_ORIGIN ?? true });
@@ -79,7 +107,7 @@ app.post("/api/chat", async (req, reply) => {
   };
 
   try {
-    const tokens = await streamChat({
+    const usage: TokenUsage = await streamChat({
       client,
       system: systemPrompt,
       messages,
@@ -87,8 +115,17 @@ app.post("/api/chat", async (req, reply) => {
       onText: (delta) => send("delta", { text: delta }),
       visitorContext,
     });
-    guard.recordUsage(tokens);
-    send("done", {});
+    guard.recordUsage(
+      usage.inputTokens + usage.outputTokens + usage.cacheCreationTokens + usage.cacheReadTokens,
+    );
+    send("done", { usage });
+
+    try {
+      const questions = await generateFollowUps(client, messages, spec.persona);
+      if (questions.length) send("suggestions", { questions });
+    } catch {
+      // non-critical — silently skip
+    }
   } catch (err) {
     app.log.error(err);
     send("error", { message: "Something went wrong. Please try again." });

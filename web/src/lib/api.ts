@@ -5,6 +5,13 @@ export interface ChatMessage {
 
 export type { ClientContext } from "./device.js";
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+}
+
 export interface SpecResponse {
   persona: {
     name: string;
@@ -28,6 +35,8 @@ export async function fetchSpec(): Promise<SpecResponse> {
 export interface StreamChatOptions {
   messages: ChatMessage[];
   onDelta: (text: string) => void;
+  onDone?: (usage: TokenUsage) => void;
+  onSuggestions?: (questions: string[]) => void;
   clientContext?: import("./device.js").ClientContext;
   sessionDurationSeconds?: number;
 }
@@ -81,6 +90,8 @@ export async function streamChat(
       if (!dataLine) continue;
       const data = JSON.parse(dataLine);
       if (type === "delta") opts.onDelta(data.text);
+      else if (type === "done") opts.onDone?.(data.usage);
+      else if (type === "suggestions") opts.onSuggestions?.(data.questions);
       else if (type === "error") throw new Error(data.message);
     }
   }

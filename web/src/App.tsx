@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchSpec, streamChat, type ChatMessage } from "./lib/api.js";
+import { fetchSpec, streamChat, type ChatMessage, type TokenUsage } from "./lib/api.js";
 import { collectClientContext, getSessionDuration, type ClientContext } from "./lib/device.js";
 import IntroCard from "./components/IntroCard.js";
 import ChatPanel from "./components/ChatPanel.js";
@@ -15,7 +15,7 @@ function Header() {
         </div>
         <div className="leading-tight">
           <div className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-white/80">
-            Shay Kopilevich
+            Shay Kopilevich&nbsp;🇮🇱
           </div>
           <div className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-white/35">
             Interview Agent
@@ -57,6 +57,8 @@ function Footer({ onOpenSpec }: { onOpenSpec: () => void }) {
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
+  const [tokenUsage, setTokenUsage] = useState<Record<number, TokenUsage>>({});
   const [showSpec, setShowSpec] = useState(false);
   const [busy, setBusy] = useState(false);
   const clientContextRef = useRef<ClientContext | null>(null);
@@ -72,7 +74,9 @@ export default function App() {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
     setBusy(true);
+    setDynamicSuggestions([]);
     const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
+    const assistantIdx = next.length; // index of the incoming assistant message
     setMessages([...next, { role: "assistant", content: "" }]);
     try {
       const ctx = clientContextRef.current ?? undefined;
@@ -92,6 +96,12 @@ export default function App() {
             };
             return copy;
           });
+        },
+        onDone: (usage) => {
+          setTokenUsage((prev) => ({ ...prev, [assistantIdx]: usage }));
+        },
+        onSuggestions: (questions) => {
+          setDynamicSuggestions(questions);
         },
       });
     } catch (err) {
@@ -121,7 +131,13 @@ export default function App() {
 
         <main className={"flex flex-1 flex-col " + (started ? "justify-end" : "")}>
           {started ? (
-            <ChatPanel messages={messages} busy={busy} onSend={onSend} />
+            <ChatPanel
+              messages={messages}
+              busy={busy}
+              onSend={onSend}
+              tokenUsage={tokenUsage}
+              dynamicSuggestions={dynamicSuggestions}
+            />
           ) : (
             <IntroCard suggestions={suggestions} onPick={onSend} />
           )}
