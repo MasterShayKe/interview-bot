@@ -120,7 +120,7 @@ export default function SpecDialog({ onClose }: { onClose: () => void }) {
                       className="flex gap-2.5 text-[0.84rem] leading-relaxed text-white/65"
                     >
                       <span className="mt-[0.55rem] h-1 w-1 shrink-0 rounded-full bg-accent/70" />
-                      <span>{r}</span>
+                      <span>{String(r)}</span>
                     </li>
                   ))}
                   <li className="flex gap-2.5 text-[0.84rem] leading-relaxed text-white/65">
