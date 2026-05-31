@@ -6,11 +6,16 @@ interface Props {
 export default function IntroCard({ suggestions, onPick }: Props) {
   return (
     <div className="flex flex-1 flex-col justify-center py-10">
-      <span className="font-mono text-[0.7rem] uppercase tracking-[0.28em] text-accent/80 animate-fade-up [animation-delay:40ms]">
-        AI Representative
-      </span>
+      <div className="animate-fade-up [animation-delay:40ms]">
+        <div className="font-mono text-[0.72rem] uppercase tracking-[0.26em] text-accent/90">
+          AI Implementation Lead
+        </div>
+        <div className="mt-1.5 font-mono text-[0.62rem] uppercase tracking-[0.22em] text-white/35">
+          Enterprise IT · Agents · Automation
+        </div>
+      </div>
 
-      <h1 className="mt-5 font-display text-[2.9rem] leading-[0.96] text-white sm:text-6xl animate-fade-up [animation-delay:120ms]">
+      <h1 className="mt-6 font-display text-[2.9rem] leading-[0.96] text-white sm:text-6xl animate-fade-up [animation-delay:120ms]">
         Ask me anything about
         <br />
         <span className="italic text-accent">Shay Kopilevich</span>.

@@ -56,12 +56,16 @@ function Footer({ onOpenSpec }: { onOpenSpec: () => void }) {
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [contactEmail, setContactEmail] = useState("shaykopi@gmail.com");
   const [showSpec, setShowSpec] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     fetchSpec()
-      .then((s) => setSuggestions(s.persona.suggested_questions))
+      .then((s) => {
+        setSuggestions(s.persona.suggested_questions);
+        if (s.persona.contact_email) setContactEmail(s.persona.contact_email);
+      })
       .catch(() => setSuggestions([]));
   }, []);
 
@@ -109,7 +113,12 @@ export default function App() {
 
         <main className={"flex flex-1 flex-col " + (started ? "justify-end" : "")}>
           {started ? (
-            <ChatPanel messages={messages} busy={busy} />
+            <ChatPanel
+              messages={messages}
+              busy={busy}
+              onSend={onSend}
+              contactEmail={contactEmail}
+            />
           ) : (
             <IntroCard suggestions={suggestions} onPick={onSend} />
           )}

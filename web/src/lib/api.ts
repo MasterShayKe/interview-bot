@@ -8,6 +8,10 @@ export interface SpecResponse {
     name: string;
     subject_name: string;
     suggested_questions: string[];
+    contact_email?: string;
+    rules?: string[];
+    tone?: string;
+    language_rule?: string;
     [k: string]: unknown;
   };
   facts: { path: string; content: string }[];

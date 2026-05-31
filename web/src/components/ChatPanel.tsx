@@ -5,7 +5,15 @@ import Markdown from "./Markdown.js";
 interface Props {
   messages: ChatMessage[];
   busy: boolean;
+  onSend: (text: string) => void;
+  contactEmail: string;
 }
+
+const FOLLOWUPS: { label: string; q: string }[] = [
+  { label: "Show AI projects", q: "Show me Shay's AI projects." },
+  { label: "Explain NiCE impact", q: "Explain Shay's impact at NiCE." },
+  { label: "Why hire Shay?", q: "Why should we hire Shay?" },
+];
 
 function Avatar() {
   return (
@@ -36,11 +44,50 @@ function Thinking() {
   );
 }
 
-export default function ChatPanel({ messages, busy }: Props) {
+function FollowUps({
+  onSend,
+  email,
+}: {
+  onSend: (q: string) => void;
+  email: string;
+}) {
+  return (
+    <div className="mt-1 flex flex-wrap gap-2 pl-[2.875rem] animate-fade-up">
+      {FOLLOWUPS.map((f) => (
+        <button
+          key={f.label}
+          onClick={() => onSend(f.q)}
+          className="rounded-full border border-white/10 bg-white/[0.02] px-3.5 py-1.5 text-[0.8rem] text-white/60 transition-all duration-200 hover:border-accent/40 hover:bg-accent/[0.06] hover:text-white"
+        >
+          {f.label}
+        </button>
+      ))}
+      <a
+        href={`mailto:${email}?subject=${encodeURIComponent(
+          "Interview with Shay Kopilevich",
+        )}`}
+        className="rounded-full border border-accent/30 bg-accent/10 px-3.5 py-1.5 text-[0.8rem] font-medium text-accent transition-all duration-200 hover:bg-accent/20"
+      >
+        Book an interview →
+      </a>
+    </div>
+  );
+}
+
+export default function ChatPanel({
+  messages,
+  busy,
+  onSend,
+  contactEmail,
+}: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
+
+  const last = messages[messages.length - 1];
+  const showFollowups =
+    !busy && last?.role === "assistant" && last.content.length > 0;
 
   return (
     <div className="flex flex-col gap-7 py-4">
@@ -73,6 +120,9 @@ export default function ChatPanel({ messages, busy }: Props) {
           </div>
         );
       })}
+
+      {showFollowups && <FollowUps onSend={onSend} email={contactEmail} />}
+
       <div ref={endRef} />
     </div>
   );
