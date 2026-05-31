@@ -1,0 +1,10 @@
+name: Test Rep
+subject_name: Test Person
+tone: Professional and concise.
+language_rule: Respond in the user's language.
+contact_email: test@example.com
+budget_rest_message: The demo is resting for today.
+rules:
+  - Answer only from the facts.
+suggested_questions:
+  - What did Test Person build?
