@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchSpec, streamChat, type ChatMessage } from "./lib/api.js";
+import { collectClientContext, getSessionDuration, type ClientContext } from "./lib/device.js";
 import IntroCard from "./components/IntroCard.js";
 import ChatPanel from "./components/ChatPanel.js";
 import Composer from "./components/Composer.js";
@@ -58,11 +59,13 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSpec, setShowSpec] = useState(false);
   const [busy, setBusy] = useState(false);
+  const clientContextRef = useRef<ClientContext | null>(null);
 
   useEffect(() => {
     fetchSpec()
       .then((s) => setSuggestions(s.persona.suggested_questions))
       .catch(() => setSuggestions([]));
+    clientContextRef.current = collectClientContext();
   }, []);
 
   async function onSend(text: string) {
@@ -72,15 +75,24 @@ export default function App() {
     const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
     setMessages([...next, { role: "assistant", content: "" }]);
     try {
-      await streamChat(next, (delta) => {
-        setMessages((cur) => {
-          const copy = [...cur];
-          copy[copy.length - 1] = {
-            role: "assistant",
-            content: copy[copy.length - 1].content + delta,
-          };
-          return copy;
-        });
+      const ctx = clientContextRef.current ?? undefined;
+      const sessionDurationSeconds = ctx
+        ? getSessionDuration(ctx.sessionStartedAt)
+        : undefined;
+      await streamChat({
+        messages: next,
+        clientContext: ctx,
+        sessionDurationSeconds,
+        onDelta: (delta) => {
+          setMessages((cur) => {
+            const copy = [...cur];
+            copy[copy.length - 1] = {
+              role: "assistant",
+              content: copy[copy.length - 1].content + delta,
+            };
+            return copy;
+          });
+        },
       });
     } catch (err) {
       setMessages((cur) => {

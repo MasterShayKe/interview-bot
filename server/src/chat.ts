@@ -11,22 +11,29 @@ export interface StreamChatArgs {
   messages: ChatMessage[];
   maxTokens: number;
   onText: (delta: string) => void;
+  visitorContext?: string;
 }
 
 const MODEL = "claude-sonnet-4-6";
 
 /** Streams a Claude response. Returns total tokens used (input + output). */
 export async function streamChat(args: StreamChatArgs): Promise<number> {
+  const systemBlocks: Anthropic.Messages.TextBlockParam[] = [
+    {
+      type: "text",
+      text: args.system,
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+
+  if (args.visitorContext) {
+    systemBlocks.push({ type: "text", text: args.visitorContext });
+  }
+
   const stream = args.client.messages.stream({
     model: MODEL,
     max_tokens: args.maxTokens,
-    system: [
-      {
-        type: "text",
-        text: args.system,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
+    system: systemBlocks,
     messages: args.messages,
   });
 

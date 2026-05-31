@@ -10,6 +10,7 @@ import { loadSpec } from "./spec.js";
 import { buildSystemPrompt } from "./prompt.js";
 import { createGuard } from "./guard.js";
 import { streamChat, type ChatMessage } from "./chat.js";
+import { buildVisitorContext, type ClientContext } from "./context.js";
 
 const SPEC_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -50,12 +51,22 @@ app.post("/api/chat", async (req, reply) => {
     return { error: "Too many messages - please slow down a moment." };
   }
 
-  const body = req.body as { messages?: ChatMessage[] };
+  const body = req.body as {
+    messages?: ChatMessage[];
+    clientContext?: ClientContext;
+    sessionDurationSeconds?: number;
+  };
   const messages = (body.messages ?? []).slice(-MAX_MESSAGES);
   if (messages.length === 0) {
     reply.code(400);
     return { error: "No messages provided." };
   }
+
+  const visitorContext = buildVisitorContext(
+    req,
+    body.clientContext,
+    body.sessionDurationSeconds,
+  );
 
   reply.raw.writeHead(200, {
     "Content-Type": "text/event-stream",
@@ -74,6 +85,7 @@ app.post("/api/chat", async (req, reply) => {
       messages,
       maxTokens: MAX_OUTPUT_TOKENS,
       onText: (delta) => send("delta", { text: delta }),
+      visitorContext,
     });
     guard.recordUsage(tokens);
     send("done", {});

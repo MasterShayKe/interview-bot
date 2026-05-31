@@ -3,6 +3,8 @@ export interface ChatMessage {
   content: string;
 }
 
+export type { ClientContext } from "./device.js";
+
 export interface SpecResponse {
   persona: {
     name: string;
@@ -23,18 +25,35 @@ export async function fetchSpec(): Promise<SpecResponse> {
   return res.json();
 }
 
+export interface StreamChatOptions {
+  messages: ChatMessage[];
+  onDelta: (text: string) => void;
+  clientContext?: import("./device.js").ClientContext;
+  sessionDurationSeconds?: number;
+}
+
 /**
  * Streams a chat response. Calls onDelta for each text chunk.
  * Resolves when the stream is done; rejects on transport error.
  */
 export async function streamChat(
-  messages: ChatMessage[],
-  onDelta: (text: string) => void,
+  options: StreamChatOptions | ChatMessage[],
+  onDelta?: (text: string) => void,
 ): Promise<void> {
+  // Support legacy positional call signature for backwards compat
+  const opts: StreamChatOptions =
+    Array.isArray(options)
+      ? { messages: options, onDelta: onDelta! }
+      : options;
+
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({
+      messages: opts.messages,
+      clientContext: opts.clientContext,
+      sessionDurationSeconds: opts.sessionDurationSeconds,
+    }),
   });
 
   if (!res.ok) {
@@ -61,7 +80,7 @@ export async function streamChat(
       const dataLine = lines.find((l) => l.startsWith("data: "))?.slice(6);
       if (!dataLine) continue;
       const data = JSON.parse(dataLine);
-      if (type === "delta") onDelta(data.text);
+      if (type === "delta") opts.onDelta(data.text);
       else if (type === "error") throw new Error(data.message);
     }
   }
