@@ -45,7 +45,7 @@ app.post("/api/chat", async (req, reply) => {
   }
   if (!guard.checkRateLimit(ip).ok) {
     reply.code(429);
-    return { error: "Too many messages — please slow down a moment." };
+    return { error: "Too many messages - please slow down a moment." };
   }
 
   const body = req.body as { messages?: ChatMessage[] };

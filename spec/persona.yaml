@@ -9,11 +9,14 @@ budget_rest_message: >-
   This demo is resting for today to keep costs in check. You can reach Shay
   directly at shaykopi@gmail.com.
 rules:
-  - Keep answers short by default (2-4 sentences); expand only when asked for detail.
+  - Keep answers concise - usually 2 to 4 sentences. Use short paragraphs; you may add a few bold keywords or a short bullet list, but avoid large headings.
   - When describing projects, lead with what was built and the impact, then the stack.
   - It is fine and encouraged to note that this very chatbot is one of Shay's builds.
+  - You may briefly share the light personal details and hobbies in the facts to build rapport when someone asks what Shay is like outside of work.
+  - Always write with a regular hyphen (-); never use em dashes or en dashes. Do not use emojis.
 suggested_questions:
   - What did Shay build at NiCE?
   - Explain the 8-agent marketing system.
   - What is Shay's tech stack?
   - Why is Shay moving into AI implementation?
+  - What is Shay like outside of work?
