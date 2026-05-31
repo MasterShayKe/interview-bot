@@ -1,10 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchSpec, streamChat, type ChatMessage, type TokenUsage } from "./lib/api.js";
-import { collectClientContext, getSessionDuration, type ClientContext } from "./lib/device.js";
+import { collectClientContext } from "./lib/device.js";
+import BootSequence from "./components/BootSequence.js";
 import IntroCard from "./components/IntroCard.js";
 import ChatPanel from "./components/ChatPanel.js";
 import Composer from "./components/Composer.js";
 import SpecDialog from "./components/SpecDialog.js";
+import { getSessionDuration } from "./lib/device.js";
+
+interface SessionStats {
+  messages: number;
+  total: number;
+  cacheRate: number;
+}
 
 function Header() {
   return (
@@ -35,7 +43,13 @@ function Header() {
   );
 }
 
-function Footer({ onOpenSpec }: { onOpenSpec: () => void }) {
+function Footer({
+  onOpenSpec,
+  stats,
+}: {
+  onOpenSpec: () => void;
+  stats: SessionStats | null;
+}) {
   return (
     <footer className="flex items-center justify-between border-t border-white/[0.06] py-5">
       <button
@@ -47,12 +61,22 @@ function Footer({ onOpenSpec }: { onOpenSpec: () => void }) {
         </span>
         View the spec
       </button>
-      <span className="font-mono text-[0.6rem] uppercase tracking-[0.15em] text-white/25">
-        Powered by Claude
-      </span>
+      <div className="flex flex-col items-end gap-0.5">
+        {stats && (
+          <span className="font-mono text-[0.58rem] uppercase tracking-[0.1em] text-white/20">
+            {stats.messages} msg · {stats.total.toLocaleString()} tokens · {stats.cacheRate}% cached
+          </span>
+        )}
+        <span className="font-mono text-[0.6rem] uppercase tracking-[0.15em] text-white/25">
+          Powered by Claude
+        </span>
+      </div>
     </footer>
   );
 }
+
+// Collected once synchronously at module init — all synchronous browser APIs
+const initialClientContext = collectClientContext();
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -61,14 +85,34 @@ export default function App() {
   const [tokenUsage, setTokenUsage] = useState<Record<number, TokenUsage>>({});
   const [showSpec, setShowSpec] = useState(false);
   const [busy, setBusy] = useState(false);
-  const clientContextRef = useRef<ClientContext | null>(null);
+  const [bootDone, setBootDone] = useState(false);
 
   useEffect(() => {
     fetchSpec()
       .then((s) => setSuggestions(s.persona.suggested_questions))
       .catch(() => setSuggestions([]));
-    clientContextRef.current = collectClientContext();
   }, []);
+
+  const sessionStats = useMemo<SessionStats | null>(() => {
+    const vals = Object.values(tokenUsage);
+    if (!vals.length) return null;
+    const total = vals.reduce(
+      (sum, u) => sum + u.inputTokens + u.outputTokens + u.cacheCreationTokens + u.cacheReadTokens,
+      0,
+    );
+    const cached = vals.reduce((sum, u) => sum + u.cacheReadTokens, 0);
+    return {
+      messages: vals.length,
+      total,
+      cacheRate: total > 0 ? Math.round((cached / total) * 100) : 0,
+    };
+  }, [tokenUsage]);
+
+  function onClear() {
+    setMessages([]);
+    setDynamicSuggestions([]);
+    setTokenUsage({});
+  }
 
   async function onSend(text: string) {
     const trimmed = text.trim();
@@ -76,13 +120,11 @@ export default function App() {
     setBusy(true);
     setDynamicSuggestions([]);
     const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
-    const assistantIdx = next.length; // index of the incoming assistant message
+    const assistantIdx = next.length;
     setMessages([...next, { role: "assistant", content: "" }]);
     try {
-      const ctx = clientContextRef.current ?? undefined;
-      const sessionDurationSeconds = ctx
-        ? getSessionDuration(ctx.sessionStartedAt)
-        : undefined;
+      const ctx = initialClientContext;
+      const sessionDurationSeconds = getSessionDuration(ctx.sessionStartedAt);
       await streamChat({
         messages: next,
         clientContext: ctx,
@@ -130,7 +172,12 @@ export default function App() {
         <Header />
 
         <main className={"flex flex-1 flex-col " + (started ? "justify-end" : "")}>
-          {started ? (
+          {!bootDone ? (
+            <BootSequence
+              clientContext={initialClientContext}
+              onDone={() => setBootDone(true)}
+            />
+          ) : started ? (
             <ChatPanel
               messages={messages}
               busy={busy}
@@ -144,10 +191,10 @@ export default function App() {
         </main>
 
         <div className="sticky bottom-0 z-20 -mx-5 bg-gradient-to-t from-ink via-ink/95 to-transparent px-5 pb-3 pt-8 sm:-mx-8 sm:px-8">
-          <Composer busy={busy} onSend={onSend} />
+          <Composer busy={busy} onSend={onSend} onClear={onClear} />
         </div>
 
-        <Footer onOpenSpec={() => setShowSpec(true)} />
+        <Footer onOpenSpec={() => setShowSpec(true)} stats={sessionStats} />
       </div>
 
       {showSpec && <SpecDialog onClose={() => setShowSpec(false)} />}
