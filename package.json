@@ -3,5 +3,9 @@
   "private": true,
   "type": "module",
   "workspaces": ["server", "web"],
-  "engines": { "node": ">=20" }
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "npm install --include=dev && npm run build -w @interview-bot/web && npm run build -w @interview-bot/server",
+    "start": "npm run start -w @interview-bot/server"
+  }
 }
