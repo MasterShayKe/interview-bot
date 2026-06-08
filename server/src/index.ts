@@ -7,7 +7,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import { loadSpec } from "./spec.js";
-import { buildSystemPrompt } from "./prompt.js";
+import { buildSystemPrompt, buildFitSystemPrompt } from "./prompt.js";
 import { createGuard } from "./guard.js";
 import { streamChat, type ChatMessage, type TokenUsage } from "./chat.js";
 import { buildVisitorContext, type ClientContext } from "./context.js";
@@ -20,6 +20,7 @@ const SPEC_DIR = path.join(
 
 const spec = loadSpec(SPEC_DIR);
 const systemPrompt = buildSystemPrompt(spec);
+const fitSystemPrompt = buildFitSystemPrompt(spec);
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const guard = createGuard({
@@ -29,6 +30,8 @@ const guard = createGuard({
 });
 
 const MAX_OUTPUT_TOKENS = Number(process.env.MAX_OUTPUT_TOKENS ?? 800);
+const FIT_MAX_OUTPUT_TOKENS = Number(process.env.FIT_MAX_OUTPUT_TOKENS ?? 1100);
+const MAX_JD_CHARS = Number(process.env.MAX_JD_CHARS ?? 8000);
 const MAX_MESSAGES = 20;
 const SUGGESTIONS_MODEL = "claude-haiku-4-5-20251001";
 
@@ -129,6 +132,70 @@ app.post("/api/chat", async (req, reply) => {
   } catch (err) {
     app.log.error(err);
     send("error", { message: "Something went wrong. Please try again." });
+  } finally {
+    reply.raw.end();
+  }
+});
+
+app.post("/api/fit", async (req, reply) => {
+  const ip = req.ip;
+  if (guard.isBudgetExceeded()) {
+    reply.code(503);
+    return { error: spec.persona.budget_rest_message };
+  }
+  if (!guard.checkRateLimit(ip).ok) {
+    reply.code(429);
+    return { error: "Too many requests - please slow down a moment." };
+  }
+
+  const body = req.body as {
+    jobDescription?: string;
+    clientContext?: ClientContext;
+    sessionDurationSeconds?: number;
+  };
+  const jd = (body.jobDescription ?? "").trim().slice(0, MAX_JD_CHARS);
+  if (jd.length < 40) {
+    reply.code(400);
+    return { error: "Please paste a fuller job description to analyze." };
+  }
+
+  const visitorContext = buildVisitorContext(
+    req,
+    body.clientContext,
+    body.sessionDurationSeconds,
+  );
+
+  reply.raw.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  const send = (event: string, data: unknown) => {
+    reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const usage: TokenUsage = await streamChat({
+      client,
+      system: fitSystemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: `Assess ${spec.persona.subject_name}'s fit for the role described below, following the required output format.\n\n--- JOB DESCRIPTION ---\n${jd}\n--- END JOB DESCRIPTION ---`,
+        },
+      ],
+      maxTokens: FIT_MAX_OUTPUT_TOKENS,
+      onText: (delta) => send("delta", { text: delta }),
+      visitorContext,
+    });
+    guard.recordUsage(
+      usage.inputTokens + usage.outputTokens + usage.cacheCreationTokens + usage.cacheReadTokens,
+    );
+    send("done", { usage });
+  } catch (err) {
+    app.log.error(err);
+    send("error", { message: "Something went wrong analyzing the role. Please try again." });
   } finally {
     reply.raw.end();
   }

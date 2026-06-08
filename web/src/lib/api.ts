@@ -96,3 +96,57 @@ export async function streamChat(
     }
   }
 }
+
+export interface StreamFitOptions {
+  jobDescription: string;
+  onDelta: (text: string) => void;
+  onDone?: (usage: TokenUsage) => void;
+  clientContext?: import("./device.js").ClientContext;
+  sessionDurationSeconds?: number;
+}
+
+/**
+ * Streams a grounded fit analysis for a pasted job description.
+ * Same SSE protocol as streamChat, minus follow-up suggestions.
+ */
+export async function streamFit(opts: StreamFitOptions): Promise<void> {
+  const res = await fetch("/api/fit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jobDescription: opts.jobDescription,
+      clientContext: opts.clientContext,
+      sessionDurationSeconds: opts.sessionDurationSeconds,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Request failed");
+  }
+  if (!res.body) throw new Error("No response body");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? "";
+
+    for (const evt of events) {
+      const lines = evt.split("\n");
+      const type = lines.find((l) => l.startsWith("event: "))?.slice(7);
+      const dataLine = lines.find((l) => l.startsWith("data: "))?.slice(6);
+      if (!dataLine) continue;
+      const data = JSON.parse(dataLine);
+      if (type === "delta") opts.onDelta(data.text);
+      else if (type === "done") opts.onDone?.(data.usage);
+      else if (type === "error") throw new Error(data.message);
+    }
+  }
+}

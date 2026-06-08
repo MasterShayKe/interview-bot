@@ -1,9 +1,10 @@
 interface Props {
   suggestions: string[];
   onPick: (q: string) => void;
+  onOpenFit: () => void;
 }
 
-export default function IntroCard({ suggestions, onPick }: Props) {
+export default function IntroCard({ suggestions, onPick, onOpenFit }: Props) {
   return (
     <div className="flex flex-1 flex-col justify-center py-10">
       <div className="animate-fade-up [animation-delay:40ms]">
@@ -41,6 +42,26 @@ export default function IntroCard({ suggestions, onPick }: Props) {
           </button>
         ))}
       </div>
+
+      <button
+        onClick={onOpenFit}
+        className="group mt-5 flex items-center gap-3 self-start rounded-2xl border border-accent/25 bg-accent/[0.06] px-5 py-3 text-left transition-all duration-200 hover:border-accent/50 hover:bg-accent/[0.1] animate-fade-up [animation-delay:440ms]"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent/[0.08] font-mono text-accent">
+          ⌕
+        </span>
+        <span className="leading-tight">
+          <span className="block text-sm font-medium text-white">
+            Hiring for a role? Paste the job description
+          </span>
+          <span className="block font-mono text-[0.66rem] uppercase tracking-[0.14em] text-white/40">
+            Get a grounded fit report in seconds
+          </span>
+        </span>
+        <span className="ml-1 font-mono text-accent/50 transition-colors group-hover:text-accent">
+          →
+        </span>
+      </button>
     </div>
   );
 }
