@@ -7,6 +7,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import { loadSpec } from "./spec.js";
+import { loadProjects } from "./projects.js";
 import { buildSystemPrompt, buildFitSystemPrompt } from "./prompt.js";
 import { createGuard } from "./guard.js";
 import { streamChat, type ChatMessage, type TokenUsage } from "./chat.js";
@@ -19,6 +20,7 @@ const SPEC_DIR = path.join(
 );
 
 const spec = loadSpec(SPEC_DIR);
+const projects = loadProjects(path.join(SPEC_DIR, "projects.json"));
 const systemPrompt = buildSystemPrompt(spec);
 const fitSystemPrompt = buildFitSystemPrompt(spec);
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -70,6 +72,8 @@ app.get("/api/spec", async () => ({
   persona: spec.persona,
   facts: spec.facts,
 }));
+
+app.get("/api/projects", async () => projects);
 
 app.post("/api/chat", async (req, reply) => {
   const ip = req.ip;
