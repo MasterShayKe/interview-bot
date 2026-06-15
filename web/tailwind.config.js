@@ -53,11 +53,16 @@ export default {
           "0%, 100%": { opacity: "1", transform: "scale(1)" },
           "50%": { opacity: "0.35", transform: "scale(0.7)" },
         },
+        slideIn: {
+          "0%": { opacity: "0", transform: "translateX(24px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
       },
       animation: {
         "fade-up": "fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both",
         blink: "blink 1.1s step-end infinite",
         "pulse-dot": "pulseDot 2.4s ease-in-out infinite",
+        "slide-in": "slideIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) both",
       },
     },
   },
