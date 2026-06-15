@@ -32,6 +32,62 @@ export async function fetchSpec(): Promise<SpecResponse> {
   return res.json();
 }
 
+export type Cluster = "ai" | "trading" | "community" | "web";
+
+export interface ProjectLink {
+  label: string;
+  kind: "repo" | "live" | "brand" | "private";
+  url?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  tagline: string;
+  cluster: Cluster;
+  stack: string[];
+  status?: "live";
+  detail: string;
+  links: ProjectLink[];
+}
+
+export interface Stat {
+  value: string;
+  label: string;
+}
+
+export interface Job {
+  period: string;
+  role: string;
+  org: string;
+}
+
+export interface Partner {
+  name: string;
+  blurb: string;
+  url?: string;
+}
+
+export interface ProfileResponse {
+  hero: { kicker?: string; headline: string; subhead: string };
+  stats: Stat[];
+  experience: Job[];
+  about: string[];
+  partners: Partner[];
+}
+
+export async function fetchProjects(): Promise<Project[]> {
+  const res = await fetch("/api/projects");
+  if (!res.ok) throw new Error(`projects ${res.status}`);
+  return res.json();
+}
+
+export async function fetchProfile(): Promise<ProfileResponse> {
+  const res = await fetch("/api/profile");
+  if (!res.ok) throw new Error(`profile ${res.status}`);
+  return res.json();
+}
+
 export interface StreamChatOptions {
   messages: ChatMessage[];
   onDelta: (text: string) => void;
