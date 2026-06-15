@@ -1,5 +1,19 @@
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  safelist: [
+    "bg-cluster-ai",
+    "bg-cluster-trading",
+    "bg-cluster-community",
+    "bg-cluster-web",
+    "text-cluster-ai",
+    "text-cluster-trading",
+    "text-cluster-community",
+    "text-cluster-web",
+    "shadow-cluster-ai",
+    "shadow-cluster-trading",
+    "shadow-cluster-community",
+    "shadow-cluster-web",
+  ],
   theme: {
     extend: {
       fontFamily: {
@@ -15,9 +29,16 @@ export default {
           600: "#1D2026",
         },
         accent: {
-          DEFAULT: "#C6F24E",
-          dim: "#9BBF3E",
+          DEFAULT: "#a855f7",
+          dim: "#8b5cf6",
         },
+        cluster: {
+          ai: "#8b5cf6",
+          trading: "#34d399",
+          community: "#ec4899",
+          web: "#fbbf24",
+        },
+        live: "#34d399",
       },
       keyframes: {
         fadeUp: {
