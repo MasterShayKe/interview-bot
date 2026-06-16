@@ -22,7 +22,7 @@
     "3D printing & racing RC cars"
   ],
   "partners": [
-    { "name": "UNBOXING", "blurb": "Multi-agent marketing system + WhatsApp/Telegram concierge + finance app" },
-    { "name": "Bawnzy & Friends", "blurb": "TCG community Discord bot + Instagram content studio" }
+    { "name": "UNBOXING", "blurb": "Multi-agent marketing system + WhatsApp/Telegram concierge + finance app · @by_yarden", "url": "https://unboxing.finance" },
+    { "name": "Bawnzy & Friends", "blurb": "TCG community Discord bot + Instagram content studio · @BawnzyTCG", "url": "https://instagram.com/bawnzytcg" }
   ]
 }
