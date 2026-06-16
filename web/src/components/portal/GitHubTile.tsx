@@ -2,12 +2,15 @@
  * Static placeholder for this plan. Plan 4 replaces this with live GitHub data
  * (contributions, stars, languages) fetched from the API.
  */
+
+// Decorative contribution-heatmap motif (static). Hoisted to module scope so
+// it is not rebuilt on every render.
+const cells = Array.from({ length: 24 }, (_, i) => {
+  const m = i % 4;
+  return m === 1 ? "bg-accent/40" : m === 2 ? "bg-accent" : "bg-white/[0.06]";
+});
+
 export default function GitHubTile() {
-  // Decorative contribution-heatmap motif (static).
-  const cells = Array.from({ length: 24 }, (_, i) => {
-    const m = i % 4;
-    return m === 1 ? "bg-accent/40" : m === 2 ? "bg-accent" : "bg-white/[0.06]";
-  });
 
   return (
     <a

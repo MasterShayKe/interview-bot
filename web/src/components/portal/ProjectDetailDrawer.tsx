@@ -1,31 +1,11 @@
-import { useEffect } from "react";
-import type { Cluster, Project, ProjectLink } from "../../lib/api.js";
+import { useEffect, useRef } from "react";
+import type { Project, ProjectLink } from "../../lib/api.js";
+import { CLUSTER_DOT, CLUSTER_LABEL, CLUSTER_TEXT } from "../../lib/clusters.js";
 
 interface Props {
   project: Project | null;
   onClose: () => void;
 }
-
-const CLUSTER_LABEL: Record<Cluster, string> = {
-  ai: "AI Agents",
-  trading: "Trading",
-  community: "Community",
-  web: "Web",
-};
-
-const CLUSTER_DOT: Record<Cluster, string> = {
-  ai: "bg-cluster-ai",
-  trading: "bg-cluster-trading",
-  community: "bg-cluster-community",
-  web: "bg-cluster-web",
-};
-
-const CLUSTER_TEXT: Record<Cluster, string> = {
-  ai: "text-cluster-ai",
-  trading: "text-cluster-trading",
-  community: "text-cluster-community",
-  web: "text-cluster-web",
-};
 
 function LinkRow({ link }: { link: ProjectLink }) {
   const isAnchor = (link.kind === "live" || link.kind === "repo") && link.url;
@@ -58,8 +38,11 @@ function LinkRow({ link }: { link: ProjectLink }) {
 }
 
 export default function ProjectDetailDrawer({ project, onClose }: Props) {
+  const asideRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     if (!project) return;
+    asideRef.current?.focus();
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
@@ -77,10 +60,12 @@ export default function ProjectDetailDrawer({ project, onClose }: Props) {
         aria-hidden
       />
       <aside
+        ref={asideRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={`${project.name} details`}
-        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-accent/20 bg-[#0c0913] shadow-2xl animate-slide-in"
+        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-accent/20 bg-[#0c0913] shadow-2xl animate-slide-in focus:outline-none"
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] p-6">
           <div>

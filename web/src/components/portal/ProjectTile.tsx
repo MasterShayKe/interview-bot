@@ -1,16 +1,10 @@
 import type { Project } from "../../lib/api.js";
+import { CLUSTER_STRIPE } from "../../lib/clusters.js";
 
 interface Props {
   project: Project;
   onOpen: (p: Project) => void;
 }
-
-const STRIPE: Record<Project["cluster"], string> = {
-  ai: "bg-cluster-ai",
-  trading: "bg-cluster-trading",
-  community: "bg-cluster-community",
-  web: "bg-cluster-web",
-};
 
 export default function ProjectTile({ project, onOpen }: Props) {
   const isLive = project.status === "live";
@@ -31,7 +25,7 @@ export default function ProjectTile({ project, onOpen }: Props) {
         aria-hidden
         className={
           "absolute left-0 top-3.5 bottom-3.5 w-[3px] rounded-full " +
-          STRIPE[project.cluster]
+          CLUSTER_STRIPE[project.cluster]
         }
       />
 

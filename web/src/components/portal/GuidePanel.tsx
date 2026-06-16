@@ -104,13 +104,13 @@ export default function GuidePanel({
   return (
     <div
       className={
-        "overflow-hidden rounded-2xl border border-accent/25 bg-[#0c0913] shadow-[0_0_40px_-12px_rgba(168,85,247,0.35)] " +
+        "rounded-2xl border border-accent/25 bg-[#0c0913] shadow-[0_0_40px_-12px_rgba(168,85,247,0.35)] " +
         shell
       }
     >
       <Chrome onClose={onClose} />
 
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div className="flex-1 overflow-hidden overflow-y-auto px-4 py-3">
         {started ? (
           <ChatPanel
             messages={messages}

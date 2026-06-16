@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchSpec,
   fetchProjects,
@@ -99,11 +99,11 @@ export default function App() {
       .then((s) => setSuggestions(s.persona.suggested_questions))
       .catch(() => setSuggestions([]));
 
-    Promise.all([fetchProjects(), fetchProfile()])
-      .then(([p, pr]) => {
-        setProjects(p);
-        setProfile(pr);
-      })
+    fetchProjects()
+      .then(setProjects)
+      .catch((err) => setDataError((err as Error).message));
+    fetchProfile()
+      .then(setProfile)
       .catch((err) => setDataError((err as Error).message));
   }, []);
 
@@ -206,6 +206,13 @@ export default function App() {
     }
   }
 
+  const handleCloseProject = useCallback(() => setOpenProject(null), []);
+
+  const guideSheetRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (guideOpen) guideSheetRef.current?.focus();
+  }, [guideOpen]);
+
   const guideProps = useMemo(
     () => ({
       messages,
@@ -276,7 +283,7 @@ export default function App() {
       )}
 
       {/* Mobile: floating launch button + full-screen guide sheet */}
-      {bootDone && (
+      {bootDone && !guideOpen && (
         <button
           onClick={() => setGuideOpen(true)}
           className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full border border-accent/40 bg-accent px-5 py-3 font-mono text-[0.75rem] font-semibold text-white shadow-[0_0_30px_-6px_rgba(168,85,247,0.8)] lg:hidden"
@@ -287,7 +294,14 @@ export default function App() {
       )}
 
       {bootDone && guideOpen && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-black/70 p-3 backdrop-blur-sm lg:hidden">
+        <div
+          ref={guideSheetRef}
+          tabIndex={-1}
+          aria-modal="true"
+          role="dialog"
+          aria-label="Guide"
+          className="fixed inset-0 z-40 flex flex-col bg-black/70 p-3 backdrop-blur-sm focus:outline-none lg:hidden"
+        >
           <GuidePanel
             {...guideProps}
             variant="sheet"
@@ -296,10 +310,9 @@ export default function App() {
         </div>
       )}
 
-      <ProjectDetailDrawer
-        project={openProject}
-        onClose={() => setOpenProject(null)}
-      />
+      {openProject && (
+        <ProjectDetailDrawer project={openProject} onClose={handleCloseProject} />
+      )}
 
       {showSpec && <SpecDialog onClose={() => setShowSpec(false)} />}
       {showFit && (
