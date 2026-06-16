@@ -15,6 +15,7 @@ import { streamChat, type ChatMessage, type TokenUsage } from "./chat.js";
 import { buildVisitorContext, type ClientContext } from "./context.js";
 import type { Spec } from "./spec.js";
 import { getGitHubSummary } from "./github.js";
+import { runPlayground, PLAYGROUND_TOOLS } from "./playground.js";
 
 const SPEC_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -58,6 +59,15 @@ const guard = createGuard({
   maxRequests: Number(process.env.RATE_LIMIT_MAX ?? 10),
   dailyTokenBudget: Number(process.env.DAILY_TOKEN_BUDGET ?? 1_000_000),
 });
+
+const playgroundGuard = createGuard({
+  windowMs: 60_000,
+  maxRequests: Number(process.env.PLAYGROUND_RATE_MAX ?? 3),
+  dailyTokenBudget: Number(process.env.PLAYGROUND_TOKEN_BUDGET ?? 300_000),
+});
+const PLAYGROUND_TOOL_NAMES = new Set(PLAYGROUND_TOOLS.map((t) => t.name));
+const MAX_PLAYGROUND_TASK_CHARS = 600;
+const MAX_PLAYGROUND_PERSONA_CHARS = 200;
 
 const GITHUB_LOGIN = process.env.GITHUB_LOGIN ?? "MasterShayKe";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -254,6 +264,58 @@ app.post("/api/fit", async (req, reply) => {
   } catch (err) {
     app.log.error(err);
     send("error", { message: "Something went wrong analyzing the role. Please try again." });
+  } finally {
+    reply.raw.end();
+  }
+});
+
+app.post("/api/playground", async (req, reply) => {
+  const ip = req.ip;
+  if (playgroundGuard.isBudgetExceeded()) {
+    reply.code(503);
+    return { error: spec.persona.budget_rest_message };
+  }
+  if (!playgroundGuard.checkRateLimit(ip).ok) {
+    reply.code(429);
+    return { error: "Too many playground runs - please wait a moment." };
+  }
+
+  const body = req.body as { persona?: string; toolNames?: string[]; task?: string };
+  const persona = (body.persona ?? "a helpful assistant").trim().slice(0, MAX_PLAYGROUND_PERSONA_CHARS);
+  const task = (body.task ?? "").trim().slice(0, MAX_PLAYGROUND_TASK_CHARS);
+  const toolNames = (Array.isArray(body.toolNames) ? body.toolNames : [])
+    .filter((n) => PLAYGROUND_TOOL_NAMES.has(n))
+    .slice(0, 2);
+  if (task.length < 3) {
+    reply.code(400);
+    return { error: "Give your agent a task to run." };
+  }
+
+  reply.raw.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  const send = (event: string, data: unknown) =>
+    reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+  try {
+    await runPlayground({
+      client,
+      persona,
+      toolNames,
+      task,
+      getGitHub: () => getGitHubSummary({ login: GITHUB_LOGIN, token: GITHUB_TOKEN }),
+      onEvent: (e) => {
+        if (e.type === "done") {
+          playgroundGuard.recordUsage(e.usage.inputTokens + e.usage.outputTokens);
+        }
+        send(e.type, e);
+      },
+    });
+  } catch (err) {
+    app.log.error(err);
+    send("error", { type: "error", message: "Something went wrong running your agent." });
   } finally {
     reply.raw.end();
   }
