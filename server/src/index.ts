@@ -14,6 +14,7 @@ import { createGuard } from "./guard.js";
 import { streamChat, type ChatMessage, type TokenUsage } from "./chat.js";
 import { buildVisitorContext, type ClientContext } from "./context.js";
 import type { Spec } from "./spec.js";
+import { getGitHubSummary } from "./github.js";
 
 const SPEC_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -43,6 +44,13 @@ const focusProjectTool: Anthropic.Tool = {
     required: ["projectId"],
   },
 };
+const githubTool: Anthropic.Tool = {
+  name: "github",
+  description:
+    "Look up Shay's live GitHub activity (public repo count, total stars, top languages, and most recently updated repos). Call this when the visitor asks about his GitHub, recent activity, languages, or what he's shipped lately.",
+  input_schema: { type: "object", properties: {} },
+};
+
 const projectIds = new Set(projects.map((p) => p.id));
 
 const guard = createGuard({
@@ -50,6 +58,9 @@ const guard = createGuard({
   maxRequests: Number(process.env.RATE_LIMIT_MAX ?? 10),
   dailyTokenBudget: Number(process.env.DAILY_TOKEN_BUDGET ?? 1_000_000),
 });
+
+const GITHUB_LOGIN = process.env.GITHUB_LOGIN ?? "MasterShayKe";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 const MAX_OUTPUT_TOKENS = Number(process.env.MAX_OUTPUT_TOKENS ?? 800);
 const FIT_MAX_OUTPUT_TOKENS = Number(process.env.FIT_MAX_OUTPUT_TOKENS ?? 1100);
@@ -95,6 +106,9 @@ app.get("/api/spec", async () => ({
 
 app.get("/api/projects", async () => projects);
 app.get("/api/profile", async () => profile);
+app.get("/api/github", async () =>
+  getGitHubSummary({ login: GITHUB_LOGIN, token: GITHUB_TOKEN }),
+);
 
 app.post("/api/chat", async (req, reply) => {
   const ip = req.ip;
@@ -142,7 +156,7 @@ app.post("/api/chat", async (req, reply) => {
       maxTokens: MAX_OUTPUT_TOKENS,
       onText: (delta) => send("delta", { text: delta }),
       visitorContext,
-      tools: [focusProjectTool],
+      tools: [focusProjectTool, githubTool],
       onToolUse: async (name, input) => {
         if (name === "focusProject") {
           const id = (input as { projectId?: string }).projectId ?? "";
@@ -151,6 +165,13 @@ app.post("/api/chat", async (req, reply) => {
             return `Focused project ${id} on the page.`;
           }
           return `No project with id "${id}".`;
+        }
+        if (name === "github") {
+          const g = await getGitHubSummary({ login: GITHUB_LOGIN, token: GITHUB_TOKEN });
+          if (!g.available) return "GitHub data is temporarily unavailable.";
+          const langs = g.languages.map((l) => `${l.name} (${l.count})`).join(", ");
+          const recent = g.recent.map((r) => `${r.name} - ${r.language ?? "?"}, ${r.stars}*`).join("; ");
+          return `Public repos: ${g.publicRepos}. Total stars: ${g.totalStars}. Languages: ${langs}. Recent: ${recent}.`;
         }
         return `Unknown tool: ${name}`;
       },
