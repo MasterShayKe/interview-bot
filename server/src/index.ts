@@ -27,6 +27,24 @@ const systemPrompt = buildSystemPrompt(spec);
 const fitSystemPrompt = buildFitSystemPrompt(spec);
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const focusProjectTool: Anthropic.Tool = {
+  name: "focusProject",
+  description:
+    "Visually highlight and open one of Shay's projects on the page when you start discussing it. Call this the moment you begin talking about a specific project, before describing it.",
+  input_schema: {
+    type: "object",
+    properties: {
+      projectId: {
+        type: "string",
+        enum: projects.map((p) => p.id),
+        description: "The id of the project to focus.",
+      },
+    },
+    required: ["projectId"],
+  },
+};
+const projectIds = new Set(projects.map((p) => p.id));
+
 const guard = createGuard({
   windowMs: 60_000,
   maxRequests: Number(process.env.RATE_LIMIT_MAX ?? 10),
@@ -124,6 +142,18 @@ app.post("/api/chat", async (req, reply) => {
       maxTokens: MAX_OUTPUT_TOKENS,
       onText: (delta) => send("delta", { text: delta }),
       visitorContext,
+      tools: [focusProjectTool],
+      onToolUse: async (name, input) => {
+        if (name === "focusProject") {
+          const id = (input as { projectId?: string }).projectId ?? "";
+          if (projectIds.has(id)) {
+            send("tool", { name: "focusProject", projectId: id });
+            return `Focused project ${id} on the page.`;
+          }
+          return `No project with id "${id}".`;
+        }
+        return `Unknown tool: ${name}`;
+      },
     });
     guard.recordUsage(
       usage.inputTokens + usage.outputTokens + usage.cacheCreationTokens + usage.cacheReadTokens,
