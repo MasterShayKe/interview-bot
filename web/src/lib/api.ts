@@ -93,6 +93,7 @@ export interface StreamChatOptions {
   onDelta: (text: string) => void;
   onDone?: (usage: TokenUsage) => void;
   onSuggestions?: (questions: string[]) => void;
+  onTool?: (tool: { name: string; projectId?: string }) => void;
   clientContext?: import("./device.js").ClientContext;
   sessionDurationSeconds?: number;
 }
@@ -148,6 +149,7 @@ export async function streamChat(
       if (type === "delta") opts.onDelta(data.text);
       else if (type === "done") opts.onDone?.(data.usage);
       else if (type === "suggestions") opts.onSuggestions?.(data.questions);
+      else if (type === "tool") opts.onTool?.(data);
       else if (type === "error") throw new Error(data.message);
     }
   }

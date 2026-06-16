@@ -145,6 +145,12 @@ export default function App() {
         onSuggestions: (questions) => {
           setDynamicSuggestions(questions);
         },
+        onTool: (tool) => {
+          if (tool.name === "focusProject" && tool.projectId) {
+            const p = projects.find((proj) => proj.id === tool.projectId);
+            if (p) setOpenProject(p);
+          }
+        },
       });
     } catch (err) {
       setMessages((cur) => {
