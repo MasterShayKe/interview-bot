@@ -12,8 +12,8 @@ interface Props {
   dynamicSuggestions: string[];
   /** Greeting suggestion chips shown before the conversation starts. */
   suggestions: string[];
-  /** Render in full-height sticky mode (desktop) vs. fill-parent (mobile sheet). */
-  variant?: "sticky" | "sheet";
+  /** sticky (legacy) | rail (desktop side-rail overlay) | sheet (mobile full-screen). */
+  variant?: "sticky" | "rail" | "sheet";
   /** Optional close handler — renders an X (used by the mobile sheet). */
   onClose?: () => void;
 }
@@ -98,13 +98,15 @@ export default function GuidePanel({
   const started = messages.length > 0;
   const shell =
     variant === "sticky"
-      ? "sticky top-6 flex max-h-[calc(100vh-3rem)] min-h-[640px] flex-col"
-      : "flex h-full flex-col";
+      ? "sticky top-6 flex max-h-[calc(100vh-3rem)] min-h-[640px] flex-col rounded-2xl border border-accent/25"
+      : variant === "rail"
+        ? "flex h-full flex-col rounded-2xl border border-accent/25 sm:rounded-2xl sm:rounded-l-2xl"
+        : "flex h-full flex-col rounded-2xl border border-accent/25";
 
   return (
     <div
       className={
-        "rounded-2xl border border-accent/25 bg-[#0c0913] shadow-[0_0_40px_-12px_rgba(168,85,247,0.35)] " +
+        "overflow-hidden bg-[#0c0913] shadow-[0_0_60px_-12px_rgba(168,85,247,0.4)] " +
         shell
       }
     >
