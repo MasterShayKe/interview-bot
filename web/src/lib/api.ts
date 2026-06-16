@@ -76,6 +76,30 @@ export interface ProfileResponse {
   partners: Partner[];
 }
 
+export interface RepoCard {
+  name: string;
+  url: string;
+  description: string | null;
+  language: string | null;
+  stars: number;
+  pushedAt: string;
+}
+
+export interface GitHubSummary {
+  login: string;
+  available: boolean;
+  publicRepos: number;
+  totalStars: number;
+  languages: { name: string; count: number }[];
+  recent: RepoCard[];
+}
+
+export async function fetchGitHub(): Promise<GitHubSummary> {
+  const res = await fetch("/api/github");
+  if (!res.ok) throw new Error(`github ${res.status}`);
+  return res.json();
+}
+
 export async function fetchProjects(): Promise<Project[]> {
   const res = await fetch("/api/projects");
   if (!res.ok) throw new Error(`projects ${res.status}`);

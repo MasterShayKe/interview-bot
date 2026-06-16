@@ -3,12 +3,14 @@ import {
   fetchSpec,
   fetchProjects,
   fetchProfile,
+  fetchGitHub,
   streamChat,
   streamFit,
   type ChatMessage,
   type TokenUsage,
   type Project,
   type ProfileResponse,
+  type GitHubSummary,
 } from "./lib/api.js";
 import { collectClientContext, getSessionDuration } from "./lib/device.js";
 import BootSequence from "./components/BootSequence.js";
@@ -90,6 +92,7 @@ export default function App() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [github, setGithub] = useState<GitHubSummary | null>(null);
   const [openProject, setOpenProject] = useState<Project | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -105,6 +108,9 @@ export default function App() {
     fetchProfile()
       .then(setProfile)
       .catch((err) => setDataError((err as Error).message));
+    fetchGitHub()
+      .then(setGithub)
+      .catch(() => setGithub({ login: "MasterShayKe", available: false, publicRepos: 0, totalStars: 0, languages: [], recent: [] }));
   }, []);
 
   function onClear() {
@@ -265,7 +271,7 @@ export default function App() {
               <ProjectGrid
                 projects={projects}
                 onOpen={setOpenProject}
-                trailing={<GitHubTile />}
+                trailing={<GitHubTile data={github} />}
               />
 
               {profile && <ExperienceTimeline experience={profile.experience} />}
