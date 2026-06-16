@@ -232,3 +232,39 @@ export async function streamFit(opts: StreamFitOptions): Promise<void> {
     }
   }
 }
+
+export type PlaygroundEvent =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; name: string; input: unknown }
+  | { type: "tool_result"; name: string; output: string }
+  | { type: "done"; usage: { inputTokens: number; outputTokens: number } }
+  | { type: "error"; message: string };
+
+export async function runPlayground(
+  body: { persona: string; toolNames: string[]; task: string },
+  onEvent: (e: PlaygroundEvent) => void,
+): Promise<void> {
+  const res = await fetch("/api/playground", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok || !res.body) {
+    onEvent({ type: "error", message: `Request failed (${res.status}).` });
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const frames = buf.split("\n\n");
+    buf = frames.pop() ?? "";
+    for (const frame of frames) {
+      const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+      if (dataLine) onEvent(JSON.parse(dataLine.slice(5).trim()));
+    }
+  }
+}

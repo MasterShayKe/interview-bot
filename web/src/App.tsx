@@ -24,6 +24,7 @@ import ExperienceTimeline from "./components/portal/ExperienceTimeline.js";
 import AboutTile from "./components/portal/AboutTile.js";
 import PartnersTile from "./components/portal/PartnersTile.js";
 import GuidePanel from "./components/portal/GuidePanel.js";
+import Playground from "./components/portal/Playground.js";
 
 const GITHUB_URL = "https://github.com/MasterShayKe";
 
@@ -96,6 +97,7 @@ export default function App() {
   const [openProject, setOpenProject] = useState<Project | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
 
   useEffect(() => {
     fetchSpec()
@@ -274,6 +276,45 @@ export default function App() {
                 trailing={<GitHubTile data={github} />}
               />
 
+              {/* Build-a-bot tile */}
+              <button
+                onClick={() => setPlaygroundOpen(true)}
+                className="group w-full rounded-2xl border border-accent/20 bg-white/[0.02] p-5 text-left transition-all hover:border-accent/40 hover:bg-accent/[0.04] hover:shadow-[0_0_30px_-10px_rgba(168,85,247,0.3)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 font-mono text-[0.68rem] uppercase tracking-[0.14em] text-accent/70 mb-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-accent/70 group-hover:bg-accent transition-colors" />
+                      live sandbox
+                    </div>
+                    <div className="font-display text-[1.05rem] font-semibold text-white group-hover:text-white leading-snug mb-1">
+                      Build a bot · run a mini-agent live
+                    </div>
+                    <div className="font-mono text-[0.72rem] text-white/40 leading-relaxed">
+                      Pick a persona, pick tools, give it a task — watch the real agent loop run with visible tool calls &amp; results.
+                    </div>
+                  </div>
+                  <div className="shrink-0 mt-1 flex h-9 w-9 items-center justify-center rounded-xl border border-accent/20 bg-accent/[0.06] text-accent/60 group-hover:border-accent/40 group-hover:text-accent transition-all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {["calculator", "word_count", "github_lookup"].map((tool) => (
+                    <span
+                      key={tool}
+                      className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 font-mono text-[0.62rem] text-white/35"
+                    >
+                      {tool}
+                    </span>
+                  ))}
+                  <span className="rounded-md border border-white/[0.06] bg-white/[0.02] px-2 py-0.5 font-mono text-[0.62rem] text-white/25">
+                    claude-haiku-4-5 · ≤4 iterations
+                  </span>
+                </div>
+              </button>
+
               {profile && <ExperienceTimeline experience={profile.experience} />}
 
               {profile && (
@@ -330,6 +371,7 @@ export default function App() {
       {showFit && (
         <FitDialog onClose={() => setShowFit(false)} onAnalyze={onAnalyzeFit} />
       )}
+      <Playground open={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
     </>
   );
 }
