@@ -7,11 +7,15 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import { loadSpec } from "./spec.js";
+import { loadProjects } from "./projects.js";
+import { loadProfile } from "./profile.js";
 import { buildSystemPrompt, buildFitSystemPrompt } from "./prompt.js";
 import { createGuard } from "./guard.js";
 import { streamChat, type ChatMessage, type TokenUsage } from "./chat.js";
 import { buildVisitorContext, type ClientContext } from "./context.js";
 import type { Spec } from "./spec.js";
+import { getGitHubSummary } from "./github.js";
+import { runPlayground, PLAYGROUND_TOOLS } from "./playground.js";
 
 const SPEC_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -19,15 +23,54 @@ const SPEC_DIR = path.join(
 );
 
 const spec = loadSpec(SPEC_DIR);
+const projects = loadProjects(path.join(SPEC_DIR, "projects.json"));
+const profile = loadProfile(path.join(SPEC_DIR, "profile.json"));
 const systemPrompt = buildSystemPrompt(spec);
 const fitSystemPrompt = buildFitSystemPrompt(spec);
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const focusProjectTool: Anthropic.Tool = {
+  name: "focusProject",
+  description:
+    "Visually highlight and open one of Shay's projects on the page when you start discussing it. Call this the moment you begin talking about a specific project, before describing it.",
+  input_schema: {
+    type: "object",
+    properties: {
+      projectId: {
+        type: "string",
+        enum: projects.map((p) => p.id),
+        description: "The id of the project to focus.",
+      },
+    },
+    required: ["projectId"],
+  },
+};
+const githubTool: Anthropic.Tool = {
+  name: "github",
+  description:
+    "Look up Shay's live GitHub activity (public repo count, total stars, top languages, and most recently updated repos). Call this when the visitor asks about his GitHub, recent activity, languages, or what he's shipped lately.",
+  input_schema: { type: "object", properties: {} },
+};
+
+const projectIds = new Set(projects.map((p) => p.id));
 
 const guard = createGuard({
   windowMs: 60_000,
   maxRequests: Number(process.env.RATE_LIMIT_MAX ?? 10),
   dailyTokenBudget: Number(process.env.DAILY_TOKEN_BUDGET ?? 1_000_000),
 });
+
+const playgroundGuard = createGuard({
+  windowMs: 60_000,
+  maxRequests: Number(process.env.PLAYGROUND_RATE_MAX ?? 3),
+  dailyTokenBudget: Number(process.env.PLAYGROUND_TOKEN_BUDGET ?? 300_000),
+});
+const PLAYGROUND_TOOL_NAMES = new Set(PLAYGROUND_TOOLS.map((t) => t.name));
+const MAX_PLAYGROUND_TASK_CHARS = 600;
+const MAX_PLAYGROUND_PERSONA_CHARS = 200;
+
+const GITHUB_LOGIN = process.env.GITHUB_LOGIN ?? "MasterShayKe";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 const MAX_OUTPUT_TOKENS = Number(process.env.MAX_OUTPUT_TOKENS ?? 800);
 const FIT_MAX_OUTPUT_TOKENS = Number(process.env.FIT_MAX_OUTPUT_TOKENS ?? 1100);
@@ -70,6 +113,12 @@ app.get("/api/spec", async () => ({
   persona: spec.persona,
   facts: spec.facts,
 }));
+
+app.get("/api/projects", async () => projects);
+app.get("/api/profile", async () => profile);
+app.get("/api/github", async () =>
+  getGitHubSummary({ login: GITHUB_LOGIN, token: GITHUB_TOKEN }),
+);
 
 app.post("/api/chat", async (req, reply) => {
   const ip = req.ip;
@@ -117,6 +166,25 @@ app.post("/api/chat", async (req, reply) => {
       maxTokens: MAX_OUTPUT_TOKENS,
       onText: (delta) => send("delta", { text: delta }),
       visitorContext,
+      tools: [focusProjectTool, githubTool],
+      onToolUse: async (name, input) => {
+        if (name === "focusProject") {
+          const id = (input as { projectId?: string }).projectId ?? "";
+          if (projectIds.has(id)) {
+            send("tool", { name: "focusProject", projectId: id });
+            return `Focused project ${id} on the page.`;
+          }
+          return `No project with id "${id}".`;
+        }
+        if (name === "github") {
+          const g = await getGitHubSummary({ login: GITHUB_LOGIN, token: GITHUB_TOKEN });
+          if (!g.available) return "GitHub data is temporarily unavailable.";
+          const langs = g.languages.map((l) => `${l.name} (${l.count})`).join(", ");
+          const recent = g.recent.map((r) => `${r.name} - ${r.language ?? "?"}, ${r.stars}*`).join("; ");
+          return `Public repos: ${g.publicRepos}. Total stars: ${g.totalStars}. Languages: ${langs}. Recent: ${recent}.`;
+        }
+        return `Unknown tool: ${name}`;
+      },
     });
     guard.recordUsage(
       usage.inputTokens + usage.outputTokens + usage.cacheCreationTokens + usage.cacheReadTokens,
@@ -196,6 +264,58 @@ app.post("/api/fit", async (req, reply) => {
   } catch (err) {
     app.log.error(err);
     send("error", { message: "Something went wrong analyzing the role. Please try again." });
+  } finally {
+    reply.raw.end();
+  }
+});
+
+app.post("/api/playground", async (req, reply) => {
+  const ip = req.ip;
+  if (playgroundGuard.isBudgetExceeded()) {
+    reply.code(503);
+    return { error: spec.persona.budget_rest_message };
+  }
+  if (!playgroundGuard.checkRateLimit(ip).ok) {
+    reply.code(429);
+    return { error: "Too many playground runs - please wait a moment." };
+  }
+
+  const body = req.body as { persona?: string; toolNames?: string[]; task?: string };
+  const persona = (body.persona ?? "a helpful assistant").trim().slice(0, MAX_PLAYGROUND_PERSONA_CHARS);
+  const task = (body.task ?? "").trim().slice(0, MAX_PLAYGROUND_TASK_CHARS);
+  const toolNames = (Array.isArray(body.toolNames) ? body.toolNames : [])
+    .filter((n) => PLAYGROUND_TOOL_NAMES.has(n))
+    .slice(0, 2);
+  if (task.length < 3) {
+    reply.code(400);
+    return { error: "Give your agent a task to run." };
+  }
+
+  reply.raw.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  const send = (event: string, data: unknown) =>
+    reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+  try {
+    await runPlayground({
+      client,
+      persona,
+      toolNames,
+      task,
+      getGitHub: () => getGitHubSummary({ login: GITHUB_LOGIN, token: GITHUB_TOKEN }),
+      onEvent: (e) => {
+        if (e.type === "done") {
+          playgroundGuard.recordUsage(e.usage.inputTokens + e.usage.outputTokens);
+        }
+        send(e.type, e);
+      },
+    });
+  } catch (err) {
+    app.log.error(err);
+    send("error", { type: "error", message: "Something went wrong running your agent." });
   } finally {
     reply.raw.end();
   }

@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --ink: #0a0b0d;
-  --text: #ecebe4;
-  --accent: #c6f24e;
+  --ink: #0a0810;
+  --text: #ece8f6;
+  --accent: #a855f7;
 }
 
 * {
@@ -28,7 +28,38 @@ body {
 
 ::selection {
   background: var(--accent);
-  color: #0a0b0d;
+  color: #faf7ff;
+}
+
+/* ---- Scroll reveal ---- */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- Reduced motion: honor the user's preference everywhere ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* ---- Background atmosphere ---- */
@@ -38,8 +69,8 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(58rem 38rem at 50% -12%, rgba(198, 242, 78, 0.11), transparent 60%),
-    radial-gradient(46rem 46rem at 105% 0%, rgba(86, 130, 255, 0.06), transparent 55%),
+    radial-gradient(58rem 38rem at 50% -12%, rgba(168, 85, 247, 0.12), transparent 60%),
+    radial-gradient(46rem 46rem at 105% 0%, rgba(139, 92, 246, 0.07), transparent 55%),
     radial-gradient(circle at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
 }
 
@@ -145,7 +176,7 @@ body {
   padding-left: 0.15rem;
 }
 .prose-chat li::marker {
-  color: rgba(198, 242, 78, 0.7);
+  color: rgba(168, 85, 247, 0.7);
 }
 .prose-chat a {
   color: var(--accent);

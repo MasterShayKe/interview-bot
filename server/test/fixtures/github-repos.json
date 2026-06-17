@@ -1,0 +1,6 @@
+[
+  { "name": "interview-bot", "html_url": "https://github.com/MasterShayKe/interview-bot", "description": "grounded agent", "language": "TypeScript", "stargazers_count": 4, "fork": false, "pushed_at": "2026-06-08T10:00:00Z" },
+  { "name": "crypto-trading-agent", "html_url": "https://github.com/MasterShayKe/crypto-trading-agent", "description": "KAITO", "language": "Python", "stargazers_count": 2, "fork": false, "pushed_at": "2026-06-10T10:00:00Z" },
+  { "name": "discord-tcg-bot", "html_url": "https://github.com/MasterShayKe/discord-tcg-bot", "description": null, "language": "Python", "stargazers_count": 1, "fork": false, "pushed_at": "2026-06-15T10:00:00Z" },
+  { "name": "some-fork", "html_url": "https://github.com/MasterShayKe/some-fork", "description": "x", "language": "Go", "stargazers_count": 99, "fork": true, "pushed_at": "2026-01-01T10:00:00Z" }
+]

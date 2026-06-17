@@ -1,0 +1,36 @@
+import { Component, type ReactNode } from "react";
+
+interface Props {
+  fallback: ReactNode;
+  children: ReactNode;
+  /** Notified once when the canvas throws, so the parent can drop the 3D-only
+   *  overlay and show the 2D fallback as a clean replacement (no overlap). */
+  onError?: () => void;
+}
+interface State {
+  hasError: boolean;
+}
+
+/**
+ * Wraps the lazy 3D canvas. If R3F/WebGL throws during render (driver issue,
+ * lost context, missing WebGL), we swap in the 2D fallback instead of a blank
+ * page. A blank page burned this project once — this guarantees projects stay
+ * reachable.
+ */
+export default class CanvasErrorBoundary extends Component<Props, State> {
+  state: State = { hasError: false };
+
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    // eslint-disable-next-line no-console
+    console.warn("Constellation canvas failed; using 2D fallback.", error);
+    this.props.onError?.();
+  }
+
+  render() {
+    return this.state.hasError ? this.props.fallback : this.props.children;
+  }
+}

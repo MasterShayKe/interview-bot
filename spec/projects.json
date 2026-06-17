@@ -1,0 +1,81 @@
+[
+  {
+    "id": "interview-bot",
+    "name": "interview-bot",
+    "tagline": "Grounded AI agent - the bot you're chatting with.",
+    "cluster": "ai",
+    "stack": ["Claude", "Fastify", "TypeScript", "React"],
+    "status": "live",
+    "detail": "A declarative, strictly grounded AI agent that represents Shay and powers this very page. Fastify + TypeScript API streaming Claude over SSE with prompt caching, a React/Vite/Tailwind UI, and a spec/ directory that defines the persona and the only facts it may state. Includes a daily token-budget guard and per-IP rate limiting.",
+    "links": [
+      { "label": "GitHub", "kind": "repo", "url": "https://github.com/MasterShayKe/interview-bot" }
+    ]
+  },
+  {
+    "id": "unboxing-hq",
+    "name": "unboxing-hq",
+    "tagline": "8-agent AI marketing department.",
+    "cluster": "ai",
+    "stack": ["TypeScript", "PostgreSQL", "Claude", "SSE"],
+    "detail": "A full-stack platform where eight specialized Claude-powered agents operate as a complete marketing team, orchestrated by a CMO agent. Express + TypeScript API, React/Vite/Tailwind app, PostgreSQL, RAG-style versioned knowledge, cost accounting, and an admin dashboard. Deployed to production.",
+    "links": [
+      { "label": "Built for UNBOXING", "kind": "brand" }
+    ]
+  },
+  {
+    "id": "unboxing-agent",
+    "name": "unboxing-agent",
+    "tagline": "Multi-agent WhatsApp / Telegram concierge.",
+    "cluster": "ai",
+    "stack": ["TypeScript", "Node.js"],
+    "detail": "An end-to-end business-operations stack built solo: a custom CRM, an automated leads system watching WhatsApp and email, and a multi-agent assistant (customer-facing + private executive assistant) routed by phone number across WhatsApp and Telegram, using an agentic tool-use loop over CRM, Calendly, Google Calendar, and Gmail.",
+    "links": [
+      { "label": "Built for UNBOXING", "kind": "brand" }
+    ]
+  },
+  {
+    "id": "crypto-kaito",
+    "name": "KAITO",
+    "tagline": "Telegram crypto decision-support agent.",
+    "cluster": "trading",
+    "stack": ["Python", "PostgreSQL", "Docker"],
+    "detail": "A personal AI decision-support system that turns noisy market data into clear, risk-managed signals. A weighted signal engine plus a built-in risk layer (loss limits, drawdown auto-stop, cooldowns), operated through a Telegram control interface. Runs in safe demo/paper mode - a research project into agent design and guardrails, not a live trading product.",
+    "links": [
+      { "label": "Private", "kind": "private" }
+    ]
+  },
+  {
+    "id": "discord-tcg-bot",
+    "name": "discord-tcg-bot",
+    "tagline": "TCG community bot + IG content studio.",
+    "cluster": "community",
+    "stack": ["Python"],
+    "detail": "A Discord bot for an active trading-card-game community: server setup, member onboarding, community engagement, and content automation - including an Instagram content studio that generates National-Geographic-style imagery and turns cards into short animations via external generation APIs, with an approval step before publishing.",
+    "links": [
+      { "label": "Private", "kind": "private" }
+    ]
+  },
+  {
+    "id": "machlifot",
+    "name": "machlifot",
+    "tagline": "Teacher-substitute tracker (RTL).",
+    "cluster": "web",
+    "stack": ["Next.js", "Firebase", "Tailwind"],
+    "detail": "A web app with a right-to-left Hebrew interface for tracking and managing substitute teachers - who is covering which class, when, and the resulting records - replacing a manual, error-prone process with a clean real-time system.",
+    "links": [
+      { "label": "Private", "kind": "private" }
+    ]
+  },
+  {
+    "id": "unboxing-finance",
+    "name": "unboxing.finance",
+    "tagline": "Finance web app, built from scratch on Base44.",
+    "cluster": "web",
+    "stack": ["Base44"],
+    "status": "live",
+    "detail": "A finance web app built from scratch on Base44 (an AI app-building platform) and shipped live. Demonstrates rapid end-to-end delivery on a low-code stack when that is the right tool for the job.",
+    "links": [
+      { "label": "Visit site", "kind": "live", "url": "https://unboxing.finance" }
+    ]
+  }
+]

@@ -1,0 +1,29 @@
+{
+  "hero": {
+    "kicker": "Portfolio · live",
+    "headline": "I build AI agents & the systems around them.",
+    "subhead": "From global IT leadership (teams up to ~70) to hands-on AI implementation. Talk to my guide - it's grounded in the real facts."
+  },
+  "stats": [
+    { "value": "7", "label": "Projects" },
+    { "value": "8 yrs", "label": "IT leadership" },
+    { "value": "5", "label": "Languages" },
+    { "value": "3", "label": "Brands built for" }
+  ],
+  "experience": [
+    { "period": "2023 - 2026", "role": "Global IT Support & Services Manager", "org": "NiCE · ~70 people · AI-led transformation, FCR 65->80%" },
+    { "period": "2021 - 2023", "role": "Global IT Support Manager", "org": "Sapiens · ~35 people · Intune modernization" },
+    { "period": "2018 - 2021", "role": "IT Service Desk Team Lead", "org": "Western Digital · ~30 people" },
+    { "period": "Service", "role": "Infantry Platoon Commander", "org": "IDF · led ~40 · Lieutenant" }
+  ],
+  "about": [
+    "Hod HaSharon, Israel · dad of two",
+    "Formula 1 & Maccabi Tel Aviv",
+    "3D printing & racing RC cars"
+  ],
+  "partners": [
+    { "name": "UNBOXING", "blurb": "Multi-agent marketing system + WhatsApp/Telegram concierge + finance app · unboxing.finance", "url": "https://instagram.com/by_yarden" },
+    { "name": "Bawnzy & Friends", "blurb": "TCG community Discord bot + Instagram content studio · savtik.com", "url": "https://instagram.com/bawnzytcg" },
+    { "name": "Katz Broz", "blurb": "The business behind the Bawnzy character - the brand the Discord bot + content studio serve", "url": "https://katzbroz.com" }
+  ]
+}
