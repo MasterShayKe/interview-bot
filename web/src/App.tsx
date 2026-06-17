@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import {
   fetchSpec,
   fetchProjects,
@@ -17,9 +18,9 @@ import { useReveal } from "./lib/useReveal.js";
 import BootSequence from "./components/BootSequence.js";
 import SpecDialog from "./components/SpecDialog.js";
 import FitDialog from "./components/FitDialog.js";
-import HeroTile from "./components/portal/HeroTile.js";
-import ProjectGrid from "./components/portal/ProjectGrid.js";
 import GitHubStat from "./components/portal/GitHubStat.js";
+import ProjectGrid from "./components/portal/ProjectGrid.js";
+import ProjectConstellation from "./components/constellation/ProjectConstellation.js";
 import ProjectDetailDrawer from "./components/portal/ProjectDetailDrawer.js";
 import ExperienceTimeline from "./components/portal/ExperienceTimeline.js";
 import FooterBand from "./components/portal/FooterBand.js";
@@ -93,6 +94,7 @@ export default function App() {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [github, setGithub] = useState<GitHubSummary | null>(null);
   const [openProject, setOpenProject] = useState<Project | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
@@ -163,7 +165,11 @@ export default function App() {
         onTool: (tool) => {
           if (tool.name === "focusProject" && tool.projectId) {
             const p = projects.find((proj) => proj.id === tool.projectId);
-            if (p) setOpenProject(p);
+            if (p) {
+              // Fly the constellation camera to this node AND open the drawer.
+              setFocusedId(p.id);
+              setOpenProject(p);
+            }
           }
         },
       });
@@ -227,7 +233,23 @@ export default function App() {
     }
   }
 
-  const handleCloseProject = useCallback(() => setOpenProject(null), []);
+  const handleCloseProject = useCallback(() => {
+    setOpenProject(null);
+    // Release the camera focus so the constellation re-centers + auto-rotates.
+    setFocusedId(null);
+  }, []);
+
+  // Anchor below the immersive constellation; the "scroll to explore" cue and
+  // guided reveals scroll here.
+  const revealAnchorRef = useRef<HTMLDivElement>(null);
+  const handleEnter = useCallback(() => {
+    revealAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const handleConstellationSelect = useCallback((p: Project) => {
+    setFocusedId(p.id);
+    setOpenProject(p);
+  }, []);
 
   const guideSheetRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -255,7 +277,6 @@ export default function App() {
     [messages, busy, tokenUsage, dynamicSuggestions, suggestions],
   );
 
-  const projectsReveal = useReveal<HTMLElement>();
   const playgroundReveal = useReveal<HTMLDivElement>();
   const experienceReveal = useReveal<HTMLElement>();
   const footerReveal = useReveal<HTMLDivElement>();
@@ -274,71 +295,81 @@ export default function App() {
           />
         </div>
       ) : (
-        <div className="relative z-10 mx-auto w-full max-w-5xl px-5 pb-28 sm:px-7">
-          <TopBar github={github} />
+        <div className="relative z-10">
+          {/* Immersive first viewport: the 3D project constellation. Owns the
+              full screen; everything else reveals below the anchor. */}
+          <ProjectConstellation
+            projects={projects}
+            focusedId={focusedId}
+            onSelect={handleConstellationSelect}
+            onEnter={handleEnter}
+          />
 
-          {dataError && (
-            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-4 py-3 font-mono text-[0.75rem] text-red-300">
-              Couldn't load portfolio data ({dataError}). The guide still works.
-            </div>
-          )}
-
-          {/* Hero */}
-          {profile && (
-            <div className="animate-fade-up">
-              <HeroTile hero={profile.hero} stats={profile.stats} />
-            </div>
-          )}
-
-          {/* Projects — the primary focal section */}
-          <section
-            ref={projectsReveal.ref}
-            className={"mt-12 " + projectsReveal.className}
-            style={projectsReveal.style}
-          >
-            <SectionHeading
-              eyebrow="Selected work"
-              title="Projects"
-              sub="Seven systems I've designed, built, and shipped — click any to dive in, or ask the guide to walk you through one."
-            />
-            <ProjectGrid projects={projects} onOpen={setOpenProject} />
-          </section>
-
-          {/* Playground CTA */}
+          {/* The rest of the page, revealed on scroll. */}
           <div
-            ref={playgroundReveal.ref}
-            className={"mt-12 " + playgroundReveal.className}
-            style={playgroundReveal.style}
+            ref={revealAnchorRef}
+            className="mx-auto w-full max-w-5xl px-5 pb-28 pt-4 sm:px-7"
           >
-            <PlaygroundCTA onOpen={() => setPlaygroundOpen(true)} />
-          </div>
+            <TopBar github={github} />
 
-          {/* Experience — the second focal section */}
-          {profile && (
-            <section
-              ref={experienceReveal.ref}
-              className={"mt-12 " + experienceReveal.className}
-              style={experienceReveal.style}
-            >
-              <ExperienceTimeline experience={profile.experience} />
-            </section>
-          )}
+            {dataError && (
+              <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-4 py-3 font-mono text-[0.75rem] text-red-300">
+                Couldn't load portfolio data ({dataError}). The guide still works.
+              </div>
+            )}
 
-          {/* Slim footer band */}
-          {profile && (
-            <div
-              ref={footerReveal.ref}
-              className={footerReveal.className}
-              style={footerReveal.style}
+            {/* Projects recap — the grid stays available below the fold too. */}
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "0px 0px -10% 0px" }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-8"
             >
-              <FooterBand
-                partners={profile.partners}
-                about={profile.about}
-                onOpenSpec={() => setShowSpec(true)}
-                onOpenFit={() => setShowFit(true)}
+              <SectionHeading
+                eyebrow="Selected work"
+                title="Projects"
+                sub="Seven systems I've designed, built, and shipped — click any to dive in, or ask the guide to walk you through one."
               />
+              <ProjectGrid projects={projects} onOpen={handleConstellationSelect} />
+            </motion.section>
+
+            {/* Playground CTA */}
+            <div
+              ref={playgroundReveal.ref}
+              className={"mt-12 " + playgroundReveal.className}
+              style={playgroundReveal.style}
+            >
+              <PlaygroundCTA onOpen={() => setPlaygroundOpen(true)} />
             </div>
-          )}
+
+            {/* Experience — the second focal section */}
+            {profile && (
+              <section
+                ref={experienceReveal.ref}
+                className={"mt-12 " + experienceReveal.className}
+                style={experienceReveal.style}
+              >
+                <ExperienceTimeline experience={profile.experience} />
+              </section>
+            )}
+
+            {/* Slim footer band */}
+            {profile && (
+              <div
+                ref={footerReveal.ref}
+                className={footerReveal.className}
+                style={footerReveal.style}
+              >
+                <FooterBand
+                  partners={profile.partners}
+                  about={profile.about}
+                  onOpenSpec={() => setShowSpec(true)}
+                  onOpenFit={() => setShowFit(true)}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 

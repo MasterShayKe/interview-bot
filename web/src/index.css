@@ -1,3 +1,8 @@
+/* Panda CSS layers — declared first so Panda's PostCSS plugin can expand them.
+   Panda is scoped to its own cascade layers and the `pd-` class prefix, so it
+   never collides with Tailwind below. */
+@layer reset, base, tokens, recipes, utilities;
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
