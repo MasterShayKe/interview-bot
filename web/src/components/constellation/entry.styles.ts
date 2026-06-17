@@ -1,210 +1,69 @@
-import { css } from "../../styled-system/css";
-
 /**
- * Panda CSS styles for the immersive entry centerpiece. These coexist with the
- * Tailwind-styled rest of the app — Panda owns only this overlay + the entry
- * chrome, scoped via the `pd-` prefix declared in panda.config.ts.
+ * Tailwind class strings for the immersive entry centerpiece. (Previously
+ * Panda CSS — moved to Tailwind, which the rest of the app already uses, after
+ * Panda's static extractor produced no CSS in this toolchain.) Kept as named
+ * exports so the components read `s.stage` etc.
  */
 
 // The full-bleed first viewport that hosts the constellation + overlay.
-export const stage = css({
-  position: "relative",
-  minH: "100svh",
-  width: "100%",
-  overflow: "hidden",
-  bg: "radial-gradient(120% 90% at 50% 8%, rgba(60,28,104,0.55) 0%, rgba(18,10,32,0.85) 46%, #0a0810 80%)",
-});
+export const stage =
+  "relative min-h-[100svh] w-full overflow-hidden bg-[radial-gradient(120%_90%_at_50%_8%,rgba(60,28,104,0.55)_0%,rgba(18,10,32,0.85)_46%,#0a0810_80%)]";
 
 // Holds the <Canvas> (or fallback) absolutely behind the text overlay.
-export const canvasLayer = css({
-  position: "absolute",
-  inset: "0",
-  zIndex: "0",
-});
+export const canvasLayer = "absolute inset-0 z-0";
 
 // Pointer-events-none text overlay so drag/orbit still hits the canvas.
-export const overlay = css({
-  position: "absolute",
-  inset: "0",
-  zIndex: "2",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  pointerEvents: "none",
-  px: "clamp(1.25rem, 5vw, 4rem)",
-  py: "clamp(1.5rem, 4vh, 3rem)",
-});
+export const overlay =
+  "absolute inset-0 z-[2] flex flex-col justify-between pointer-events-none px-[clamp(1.25rem,5vw,4rem)] py-[clamp(1.5rem,4vh,3rem)]";
 
-export const topRow = css({
-  display: "flex",
-  alignItems: "center",
-  gap: "2",
-  fontFamily: "mono",
-  fontSize: "0.6rem",
-  letterSpacing: "0.22em",
-  textTransform: "uppercase",
-  color: "rgba(236,232,246,0.45)",
-});
+export const topRow =
+  "flex items-center gap-2 font-mono text-[0.6rem] tracking-[0.22em] uppercase text-[rgba(236,232,246,0.45)]";
 
-export const topDot = css({
-  height: "6px",
-  width: "6px",
-  borderRadius: "9999px",
-  bg: "accent",
-  boxShadow: "0 0 10px rgba(168,85,247,0.9)",
-});
+export const topDot =
+  "h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(168,85,247,0.9)]";
 
-export const heroBlock = css({
-  maxW: "46rem",
-  alignSelf: "flex-start",
-  mb: "auto",
-  mt: "clamp(3rem, 14vh, 9rem)",
-});
+export const heroBlock =
+  "max-w-[46rem] self-start mb-auto mt-[clamp(3rem,14vh,9rem)]";
 
-export const kicker = css({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "2.5",
-  fontFamily: "mono",
-  fontSize: "0.64rem",
-  letterSpacing: "0.24em",
-  textTransform: "uppercase",
-  color: "rgba(196,181,253,0.9)",
-});
+export const kicker =
+  "inline-flex items-center gap-2.5 font-mono text-[0.64rem] tracking-[0.24em] uppercase text-[rgba(196,181,253,0.9)]";
 
-export const kickerRule = css({
-  height: "1px",
-  width: "1.75rem",
-  bg: "rgba(168,85,247,0.55)",
-});
+export const kickerRule = "h-px w-7 bg-[rgba(168,85,247,0.55)]";
 
-export const headline = css({
-  mt: "4",
-  fontFamily: "display",
-  fontWeight: "400",
-  lineHeight: "1.02",
-  letterSpacing: "-0.01em",
-  fontSize: "clamp(2.6rem, 7vw, 5.25rem)",
-  color: "#fdfcff",
-  textShadow: "0 2px 40px rgba(0,0,0,0.55)",
-});
+export const headline =
+  "mt-4 font-display font-normal leading-[1.02] tracking-[-0.01em] text-[clamp(2.6rem,7vw,5.25rem)] text-[#fdfcff] [text-shadow:0_2px_40px_rgba(0,0,0,0.55)]";
 
-export const headlineAccent = css({
-  fontStyle: "italic",
-  color: "transparent",
-  backgroundClip: "text",
-  backgroundImage:
-    "linear-gradient(100deg, #c4b5fd 0%, #a855f7 45%, #f0abfc 100%)",
-});
+export const headlineAccent =
+  "italic text-transparent bg-clip-text bg-[linear-gradient(100deg,#c4b5fd_0%,#a855f7_45%,#f0abfc_100%)]";
 
-export const subhead = css({
-  mt: "5",
-  maxW: "34rem",
-  fontFamily: "sans",
-  fontSize: "clamp(0.95rem, 1.4vw, 1.08rem)",
-  lineHeight: "1.6",
-  color: "rgba(236,232,246,0.66)",
-});
+export const subhead =
+  "mt-5 max-w-[34rem] font-sans text-[clamp(0.95rem,1.4vw,1.08rem)] leading-[1.6] text-[rgba(236,232,246,0.66)]";
 
-export const bottomRow = css({
-  display: "flex",
-  alignItems: "flex-end",
-  justifyContent: "space-between",
-  gap: "4",
-  flexWrap: "wrap",
-});
-
-export const hint = css({
-  fontFamily: "mono",
-  fontSize: "0.62rem",
-  letterSpacing: "0.16em",
-  textTransform: "uppercase",
-  color: "rgba(236,232,246,0.4)",
-  maxW: "16rem",
-  lineHeight: "1.7",
-});
+export const bottomRow =
+  "flex items-end justify-between gap-4 flex-wrap";
 
 // The "scroll to explore" / Enter cue — interactive, so re-enable pointers.
-export const enterCue = css({
-  pointerEvents: "auto",
-  display: "inline-flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: "2.5",
-  cursor: "pointer",
-  background: "transparent",
-  border: "none",
-  fontFamily: "mono",
-  fontSize: "0.66rem",
-  letterSpacing: "0.2em",
-  textTransform: "uppercase",
-  color: "rgba(236,232,246,0.6)",
-  transition: "color 0.25s ease",
-  _hover: { color: "#fdfcff" },
-  _focusVisible: {
-    outline: "2px solid rgba(168,85,247,0.7)",
-    outlineOffset: "6px",
-    borderRadius: "8px",
-  },
-});
+export const enterCue =
+  "pointer-events-auto inline-flex flex-col items-center gap-2.5 cursor-pointer bg-transparent border-none font-mono text-[0.66rem] tracking-[0.2em] uppercase text-[rgba(236,232,246,0.6)] transition-colors duration-[250ms] hover:text-[#fdfcff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgba(168,85,247,0.7)] focus-visible:outline-offset-[6px] focus-visible:rounded-lg";
 
-export const enterChevron = css({
-  fontSize: "1.05rem",
-  lineHeight: "1",
-});
+export const enterChevron = "text-[1.05rem] leading-none";
 
 // Legend chip showing a cluster swatch + label.
-export const legend = css({
-  pointerEvents: "auto",
-  display: "flex",
-  gap: "3.5",
-  flexWrap: "wrap",
-  alignItems: "center",
-});
+export const legend =
+  "pointer-events-auto flex gap-3.5 flex-wrap items-center";
 
-export const legendItem = css({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "1.5",
-  fontFamily: "mono",
-  fontSize: "0.58rem",
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: "rgba(236,232,246,0.5)",
-});
+export const legendItem =
+  "inline-flex items-center gap-1.5 font-mono text-[0.58rem] tracking-[0.14em] uppercase text-[rgba(236,232,246,0.5)]";
 
-export const legendSwatch = css({
-  height: "7px",
-  width: "7px",
-  borderRadius: "9999px",
-});
+export const legendSwatch = "h-[7px] w-[7px] rounded-full";
 
 // Loading fallback inside Suspense while the 3D chunk streams in.
-export const loadingWrap = css({
-  position: "absolute",
-  inset: "0",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: "1",
-});
+export const loadingWrap =
+  "absolute inset-0 flex items-center justify-center z-[1]";
 
-export const loadingPulse = css({
-  fontFamily: "mono",
-  fontSize: "0.66rem",
-  letterSpacing: "0.22em",
-  textTransform: "uppercase",
-  color: "rgba(196,181,253,0.55)",
-  animation: "pulse 1.6s ease-in-out infinite",
-});
+export const loadingPulse =
+  "font-mono text-[0.66rem] tracking-[0.22em] uppercase text-[rgba(196,181,253,0.55)] animate-pulse";
 
 // Wrapper for the 2D fallback grid so it sits centered in the stage.
-export const fallbackWrap = css({
-  position: "relative",
-  zIndex: "2",
-  maxW: "72rem",
-  mx: "auto",
-  px: "clamp(1.25rem, 5vw, 3rem)",
-  pt: "clamp(7rem, 16vh, 11rem)",
-  pb: "4rem",
-});
+export const fallbackWrap =
+  "relative z-[2] max-w-[72rem] mx-auto px-[clamp(1.25rem,5vw,3rem)] pt-[clamp(7rem,16vh,11rem)] pb-16";
