@@ -99,22 +99,23 @@ function PointerParallax({
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const dragging = useRef(false);
-  const controls = useThree((s) => s.controls) as {
-    addEventListener: (e: string, fn: () => void) => void;
-    removeEventListener: (e: string, fn: () => void) => void;
-  } | null;
+  // The canvas DOM element is always present; we watch its pointer events
+  // directly rather than the OrbitControls instance (which may be null on the
+  // first frames and whose event wiring proved brittle).
+  const domElement = useThree((s) => s.gl.domElement);
 
   useEffect(() => {
-    if (!controls) return;
-    const onStart = () => (dragging.current = true);
-    const onEnd = () => (dragging.current = false);
-    controls.addEventListener("start", onStart);
-    controls.addEventListener("end", onEnd);
+    if (!domElement) return;
+    const onDown = () => (dragging.current = true);
+    const onUp = () => (dragging.current = false);
+    domElement.addEventListener("pointerdown", onDown);
+    // Listen for release on the window so a drag that ends off-canvas still clears.
+    window.addEventListener("pointerup", onUp);
     return () => {
-      controls.removeEventListener("start", onStart);
-      controls.removeEventListener("end", onEnd);
+      domElement.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
     };
-  }, [controls]);
+  }, [domElement]);
 
   useFrame((state, delta) => {
     const g = groupRef.current;

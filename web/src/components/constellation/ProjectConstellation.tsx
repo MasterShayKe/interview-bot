@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { Project } from "../../lib/api.js";
 import { CLUSTER_HEX } from "../../lib/constellation.js";
@@ -42,9 +42,15 @@ export default function ProjectConstellation({
   onEnter,
 }: Props) {
   const prefersReduced = useReducedMotion() ?? false;
-  // Render the 3D scene only when projects are loaded, WebGL is present, and
-  // the user hasn't asked for reduced motion. Otherwise the 2D map.
-  const use3D = HAS_WEBGL && !prefersReduced && projects.length > 0;
+  // If the canvas ever throws, this latches true and we permanently switch to
+  // the 2D map for this mount — never showing both at once.
+  const [sceneFailed, setSceneFailed] = useState(false);
+  // Render the 3D scene only when projects are loaded, WebGL is present, the
+  // user hasn't asked for reduced motion, and the canvas hasn't failed.
+  // Otherwise the 2D map. `use3D` also gates the hero copy below, so when the
+  // scene fails the overlay headline disappears with it (no overlap).
+  const use3D =
+    HAS_WEBGL && !prefersReduced && projects.length > 0 && !sceneFailed;
 
   const fadeIn = useMemo(
     () =>
@@ -62,16 +68,12 @@ export default function ProjectConstellation({
       {/* 3D layer (or static fallback grid) sits behind the overlay. */}
       <div className={s.canvasLayer}>
         {use3D ? (
+          // On error the boundary flips `sceneFailed`, which re-renders this
+          // branch into the 2D fallback below — so the boundary itself renders
+          // nothing and the hero overlay and fallback can never coexist.
           <CanvasErrorBoundary
-            fallback={
-              <div className={s.fallbackWrap}>
-                <ConstellationFallback
-                  projects={projects}
-                  onOpen={onSelect}
-                  reason="error"
-                />
-              </div>
-            }
+            fallback={null}
+            onError={() => setSceneFailed(true)}
           >
             <Suspense
               fallback={
@@ -94,11 +96,13 @@ export default function ProjectConstellation({
               projects={projects}
               onOpen={onSelect}
               reason={
-                projects.length === 0
-                  ? "loading"
-                  : prefersReduced
-                    ? "reduced-motion"
-                    : "no-webgl"
+                sceneFailed
+                  ? "error"
+                  : projects.length === 0
+                    ? "loading"
+                    : prefersReduced
+                      ? "reduced-motion"
+                      : "no-webgl"
               }
             />
           </div>

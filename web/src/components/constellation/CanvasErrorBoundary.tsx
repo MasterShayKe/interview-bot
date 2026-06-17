@@ -3,6 +3,9 @@ import { Component, type ReactNode } from "react";
 interface Props {
   fallback: ReactNode;
   children: ReactNode;
+  /** Notified once when the canvas throws, so the parent can drop the 3D-only
+   *  overlay and show the 2D fallback as a clean replacement (no overlap). */
+  onError?: () => void;
 }
 interface State {
   hasError: boolean;
@@ -24,6 +27,7 @@ export default class CanvasErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: unknown) {
     // eslint-disable-next-line no-console
     console.warn("Constellation canvas failed; using 2D fallback.", error);
+    this.props.onError?.();
   }
 
   render() {
