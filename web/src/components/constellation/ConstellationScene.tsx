@@ -123,10 +123,13 @@ function PointerParallax({
     let targetY = 0;
     let targetX = 0;
     if (!reducedMotion && !focused && !dragging.current) {
-      // pointer.x / pointer.y are normalized to -1..1 across the canvas.
+      // Always-on ambient sway keeps the scene alive when the cursor is still;
+      // the cursor (pointer.x/y, normalized -1..1) biases the lean on top of it.
+      // Bounded oscillation (not an unbounded spin) keeps focus/drag transitions
+      // smooth. Slightly out-of-phase periods make the drift feel organic.
       const t = state.clock.elapsedTime;
-      targetY = state.pointer.x * 0.6 + Math.sin(t * 0.16) * 0.12;
-      targetX = -state.pointer.y * 0.32;
+      targetY = Math.sin(t * 0.13) * 0.45 + state.pointer.x * 0.5;
+      targetX = Math.sin(t * 0.19) * 0.09 - state.pointer.y * 0.3;
     }
     // Frame-rate-independent easing toward the cursor-driven target.
     g.rotation.y = THREE.MathUtils.damp(g.rotation.y, targetY, 3.5, delta);
