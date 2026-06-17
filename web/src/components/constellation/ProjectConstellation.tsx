@@ -131,8 +131,8 @@ export default function ProjectConstellation({
               </h1>
               <p className={s.subhead}>
                 Seven systems I&apos;ve designed, built, and shipped — drifting in
-                depth, grouped by what they do. Drag to orbit, click a node to
-                dive in, or ask the guide to walk you through one.
+                depth, grouped by what they do. Move your cursor to look around,
+                drag to orbit, click a node to dive in, or ask the guide.
               </p>
             </motion.div>
           )}

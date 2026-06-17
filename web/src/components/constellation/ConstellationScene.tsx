@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useThree, type ThreeElements } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -52,32 +52,87 @@ export default function ConstellationScene({
       <pointLight position={[6, 8, 10]} intensity={40} color="#c4b5fd" />
       <pointLight position={[-8, -4, 6]} intensity={22} color="#8b5cf6" />
 
-      <Edges nodes={nodes} edges={edges} />
+      <PointerParallax focused={focusedId !== null} reducedMotion={reducedMotion}>
+        <Edges nodes={nodes} edges={edges} />
 
-      {nodes.map((node) => (
-        <Node
-          key={node.project.id}
-          node={node}
-          focused={node.project.id === focusedId}
-          reducedMotion={reducedMotion}
-          onSelect={onSelect}
-        />
-      ))}
+        {nodes.map((node) => (
+          <Node
+            key={node.project.id}
+            node={node}
+            focused={node.project.id === focusedId}
+            reducedMotion={reducedMotion}
+            onSelect={onSelect}
+          />
+        ))}
+      </PointerParallax>
 
       <CameraRig nodes={nodes} focusedId={focusedId} />
 
       <OrbitControls
         enablePan={false}
         enableZoom={false}
-        autoRotate={!reducedMotion}
-        autoRotateSpeed={0.45}
-        rotateSpeed={0.6}
+        autoRotate={false}
+        rotateSpeed={0.7}
         minPolarAngle={Math.PI / 3}
         maxPolarAngle={(2 * Math.PI) / 3}
         makeDefault
       />
     </Canvas>
   );
+}
+
+/**
+ * Tips the whole constellation toward the cursor — move the mouse and the graph
+ * leans that way (pointer parallax), so direction is driven by cursor position
+ * rather than a constant auto-spin. Pauses while the user is actively dragging
+ * the orbit, and eases back to neutral when a node is focused so the camera
+ * fly-to lines up with the static layout. Disabled for reduced motion.
+ */
+function PointerParallax({
+  children,
+  focused,
+  reducedMotion,
+}: {
+  children: ReactNode;
+  focused: boolean;
+  reducedMotion: boolean;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const dragging = useRef(false);
+  const controls = useThree((s) => s.controls) as {
+    addEventListener: (e: string, fn: () => void) => void;
+    removeEventListener: (e: string, fn: () => void) => void;
+  } | null;
+
+  useEffect(() => {
+    if (!controls) return;
+    const onStart = () => (dragging.current = true);
+    const onEnd = () => (dragging.current = false);
+    controls.addEventListener("start", onStart);
+    controls.addEventListener("end", onEnd);
+    return () => {
+      controls.removeEventListener("start", onStart);
+      controls.removeEventListener("end", onEnd);
+    };
+  }, [controls]);
+
+  useFrame((state, delta) => {
+    const g = groupRef.current;
+    if (!g) return;
+    let targetY = 0;
+    let targetX = 0;
+    if (!reducedMotion && !focused && !dragging.current) {
+      // pointer.x / pointer.y are normalized to -1..1 across the canvas.
+      const t = state.clock.elapsedTime;
+      targetY = state.pointer.x * 0.6 + Math.sin(t * 0.16) * 0.12;
+      targetX = -state.pointer.y * 0.32;
+    }
+    // Frame-rate-independent easing toward the cursor-driven target.
+    g.rotation.y = THREE.MathUtils.damp(g.rotation.y, targetY, 3.5, delta);
+    g.rotation.x = THREE.MathUtils.damp(g.rotation.x, targetX, 3.5, delta);
+  });
+
+  return <group ref={groupRef}>{children}</group>;
 }
 
 function Node({
