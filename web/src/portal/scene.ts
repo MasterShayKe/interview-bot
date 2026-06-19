@@ -1,5 +1,12 @@
 import * as THREE from "three";
 import { clusterHue, type PortalProject } from "./projects.js";
+import {
+  clusterColor,
+  makeLabelSprite,
+  makeSurfaceTexture,
+  projectFacts,
+  type SurfaceFact,
+} from "./surface.js";
 
 // Palette pulled from the app's design tokens (index.css / tailwind.config.js).
 const ACCENT = new THREE.Color("#c6f24e");
@@ -8,6 +15,7 @@ const INK = new THREE.Color("#0a0b0d");
 interface SceneCallbacks {
   onHover: (index: number | null) => void;
   onSelect: (index: number) => void;
+  onSurfaceFact: (fact: SurfaceFact | null) => void;
 }
 
 /** Tint the lime accent by a hue offset so each cluster reads distinctly. */
@@ -27,14 +35,7 @@ function radialTexture(inner: string, outer = "rgba(0,0,0,0)"): THREE.Texture {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d")!;
-  const g = ctx.createRadialGradient(
-    size / 2,
-    size / 2,
-    0,
-    size / 2,
-    size / 2,
-    size / 2,
-  );
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
   g.addColorStop(0, inner);
   g.addColorStop(1, outer);
   ctx.fillStyle = g;
@@ -45,6 +46,16 @@ function radialTexture(inner: string, outer = "rgba(0,0,0,0)"): THREE.Texture {
 }
 
 const PLANET_RADIUS = 0.8;
+const SURFACE_RADIUS = 4;
+const ACTIVE_DOT = 0.86; // ~30° cap under the astronaut counts as "reached"
+
+interface Landmark {
+  group: THREE.Group;
+  obelisk: THREE.Mesh;
+  tip: THREE.Mesh;
+  sprite: THREE.Sprite;
+  dir: THREE.Vector3;
+}
 
 export class PortalScene {
   private container: HTMLElement;
@@ -60,12 +71,21 @@ export class PortalScene {
   private galaxy!: THREE.Points;
   private starfields: THREE.Points[] = [];
   private nebulae: THREE.Sprite[] = [];
-  private planets: THREE.Mesh[] = []; // raycast targets (one per project)
+  private planets: THREE.Mesh[] = [];
   private planetGroups: THREE.Group[] = [];
   private planetHalos: THREE.Sprite[] = [];
   private astronaut!: THREE.Group;
   private labels: HTMLElement[] = [];
-  private detailEl: HTMLElement | null = null;
+
+  // Surface ("walk on the star") mode.
+  private mode: "system" | "surface" = "system";
+  private surfaceRoot: THREE.Group | null = null;
+  private surfacePlanet: THREE.Mesh | null = null;
+  private landmarks: Landmark[] = [];
+  private surfaceFacts: SurfaceFact[] = [];
+  private activeLandmark: number | null = null;
+  private dragging = false;
+  private lastPointer = new THREE.Vector2();
 
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2(-2, -2);
@@ -74,7 +94,6 @@ export class PortalScene {
   private camPos = new THREE.Vector3(0, 0.8, 13);
   private camLookAt = new THREE.Vector3(0, 0, 0);
   private hovered: number | null = null;
-  private focusIndex: number | null = null;
   private reducedMotion: boolean;
   private running = true;
   private frame = 0;
@@ -89,9 +108,7 @@ export class PortalScene {
     this.labelLayer = labelLayer;
     this.projects = projects;
     this.callbacks = callbacks;
-    this.reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -110,11 +127,11 @@ export class PortalScene {
     this.camera.position.copy(this.camPos);
 
     this.scene.add(new THREE.AmbientLight(0x5a6472, 0.6));
-    const sun = new THREE.PointLight(0xfff1d0, 900, 140, 2);
-    sun.position.set(-14, 10, 8);
+    const sun = new THREE.PointLight(0xfff1d0, 900, 160, 2);
+    sun.position.set(-14, 10, 10);
     this.scene.add(sun);
-    const fill = new THREE.PointLight(ACCENT.getHex(), 120, 70, 2);
-    fill.position.set(10, -6, 6);
+    const fill = new THREE.PointLight(ACCENT.getHex(), 120, 80, 2);
+    fill.position.set(10, -6, 8);
     this.scene.add(fill);
 
     this.buildGalaxy();
@@ -125,14 +142,16 @@ export class PortalScene {
 
     window.addEventListener("resize", this.onResize);
     container.addEventListener("pointermove", this.onPointerMove);
+    container.addEventListener("pointerdown", this.onPointerDown);
+    window.addEventListener("pointerup", this.onPointerUp);
     container.addEventListener("pointerleave", this.onPointerLeave);
     container.addEventListener("click", this.onClick);
+    window.addEventListener("keydown", this.onKey);
     document.addEventListener("visibilitychange", this.onVisibility);
 
     this.renderer.setAnimationLoop(this.tick);
   }
 
-  /** A spiral galaxy of colored points, tilted and drifting in the deep field. */
   private buildGalaxy() {
     const count = 6000;
     const arms = 4;
@@ -145,14 +164,11 @@ export class PortalScene {
     for (let i = 0; i < count; i++) {
       const r = Math.pow(Math.random(), 0.6) * radius;
       const arm = (i % arms) / arms;
-      const spin = r * 0.32;
-      const branch = arm * Math.PI * 2 + spin;
+      const branch = arm * Math.PI * 2 + r * 0.32;
       const spread = (Math.random() - 0.5) * 0.6 * (1 + r * 0.12);
-
       positions[i * 3] = Math.cos(branch) * r + spread;
       positions[i * 3 + 1] = (Math.random() - 0.5) * 0.6 + spread * 0.3;
       positions[i * 3 + 2] = Math.sin(branch) * r + spread;
-
       const c = inner.clone().lerp(outer, Math.min(1, r / radius));
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
@@ -173,12 +189,11 @@ export class PortalScene {
       sizeAttenuation: true,
     });
     this.galaxy = new THREE.Points(geo, mat);
-    this.galaxy.position.set(-6, 3, -38);
+    this.galaxy.position.set(-6, 3, -40);
     this.galaxy.rotation.set(-0.9, 0.4, 0.2);
     this.scene.add(this.galaxy);
   }
 
-  /** Two parallax star layers. */
   private buildStarfields() {
     const make = (count: number, spread: number, size: number, opacity: number) => {
       const positions = new Float32Array(count * 3);
@@ -202,11 +217,10 @@ export class PortalScene {
       this.scene.add(pts);
       this.starfields.push(pts);
     };
-    make(1400, 110, 0.13, 0.85); // near
-    make(2600, 170, 0.08, 0.5); // far
+    make(1400, 120, 0.13, 0.85);
+    make(2600, 180, 0.08, 0.5);
   }
 
-  /** Large additive color clouds for depth. */
   private buildNebulae() {
     const defs: Array<[string, number, [number, number, number]]> = [
       ["rgba(198,242,78,0.16)", 28, [-14, 6, -28]],
@@ -214,13 +228,14 @@ export class PortalScene {
       ["rgba(180,90,255,0.12)", 24, [6, 12, -24]],
     ];
     for (const [color, scale, pos] of defs) {
-      const mat = new THREE.SpriteMaterial({
-        map: radialTexture(color),
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      });
-      const sprite = new THREE.Sprite(mat);
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: radialTexture(color),
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
       sprite.scale.setScalar(scale);
       sprite.position.set(pos[0], pos[1], pos[2]);
       this.scene.add(sprite);
@@ -228,7 +243,6 @@ export class PortalScene {
     }
   }
 
-  /** One planet per project, drifting on a wide orbit; the clickable target. */
   private buildPlanets() {
     const n = this.projects.length;
     this.projects.forEach((project, i) => {
@@ -247,7 +261,6 @@ export class PortalScene {
       planet.userData.index = i;
       group.add(planet);
 
-      // Thin atmosphere rim.
       const atmosphere = new THREE.Mesh(
         new THREE.SphereGeometry(PLANET_RADIUS * 1.12, 48, 48),
         new THREE.MeshBasicMaterial({
@@ -261,7 +274,6 @@ export class PortalScene {
       );
       group.add(atmosphere);
 
-      // Every third planet gets a ring system.
       if (i % 3 === 2) {
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(PLANET_RADIUS * 1.5, PLANET_RADIUS * 2.2, 64),
@@ -278,7 +290,6 @@ export class PortalScene {
         group.add(ring);
       }
 
-      // Hover/active halo (billboarded sprite).
       const halo = new THREE.Sprite(
         new THREE.SpriteMaterial({
           map: radialTexture(`#${color.getHexString()}`),
@@ -292,7 +303,6 @@ export class PortalScene {
       group.add(halo);
       this.planetHalos.push(halo);
 
-      // Spread planets around a wide orbit at varied heights and depths.
       group.userData.angle = (i / n) * Math.PI * 2 - Math.PI / 2;
       group.userData.radius = 6.0 + (i % 3) * 1.1;
       group.userData.yOffset = (i / (n - 1) - 0.5) * 5.4;
@@ -303,7 +313,6 @@ export class PortalScene {
       this.planetGroups.push(group);
       this.planets.push(planet);
 
-      // HTML label.
       const label = document.createElement("button");
       label.type = "button";
       label.className = "portal-label";
@@ -320,8 +329,7 @@ export class PortalScene {
   }
 
   private positionPlanet(group: THREE.Group, t: number) {
-    const angle =
-      (group.userData.angle as number) + (this.reducedMotion ? 0 : t * 0.04);
+    const angle = (group.userData.angle as number) + (this.reducedMotion ? 0 : t * 0.04);
     const radius = group.userData.radius as number;
     const bob = this.reducedMotion
       ? 0
@@ -333,7 +341,6 @@ export class PortalScene {
     );
   }
 
-  /** Low-poly astronaut assembled from primitives. */
   private buildAstronaut() {
     const a = new THREE.Group();
     const suit = new THREE.MeshStandardMaterial({
@@ -342,11 +349,7 @@ export class PortalScene {
       metalness: 0.1,
       flatShading: true,
     });
-    const dark = new THREE.MeshStandardMaterial({
-      color: 0x14161b,
-      roughness: 0.4,
-      metalness: 0.3,
-    });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x14161b, roughness: 0.4, metalness: 0.3 });
     const accentMat = new THREE.MeshStandardMaterial({
       color: ACCENT.getHex(),
       emissive: ACCENT.getHex(),
@@ -395,6 +398,190 @@ export class PortalScene {
     this.scene.add(a);
   }
 
+  // ---- Surface ("walk on the star") mode ----
+
+  private enterSurface(i: number) {
+    this.exitSurface(); // clear any previous star
+    const project = this.projects[i];
+    this.mode = "surface";
+    this.surfaceFacts = projectFacts(project);
+
+    const root = new THREE.Group();
+    const planet = new THREE.Mesh(
+      new THREE.SphereGeometry(SURFACE_RADIUS, 96, 96),
+      new THREE.MeshStandardMaterial({
+        map: makeSurfaceTexture(project),
+        bumpMap: makeSurfaceTexture(project),
+        bumpScale: 0.6,
+        roughness: 0.95,
+        metalness: 0.05,
+        emissive: clusterColor(project).multiplyScalar(0.12),
+      }),
+    );
+    root.add(planet);
+    this.surfacePlanet = planet;
+
+    // Atmosphere glow.
+    const atmo = new THREE.Mesh(
+      new THREE.SphereGeometry(SURFACE_RADIUS * 1.06, 64, 64),
+      new THREE.MeshBasicMaterial({
+        color: clusterColor(project),
+        transparent: true,
+        opacity: 0.1,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    root.add(atmo);
+
+    // Landmarks — distributed around the globe; children of the planet so they
+    // rotate together as you "walk".
+    const facts = this.surfaceFacts;
+    const up = new THREE.Vector3(0, 1, 0);
+    facts.forEach((fact, j) => {
+      const lon = (j / facts.length) * Math.PI * 2;
+      const lat = j % 2 === 0 ? 0.4 : -0.2;
+      const dir = new THREE.Vector3(
+        Math.cos(lat) * Math.sin(lon),
+        Math.sin(lat),
+        Math.cos(lat) * Math.cos(lon),
+      ).normalize();
+
+      const g = new THREE.Group();
+      const q = new THREE.Quaternion().setFromUnitVectors(up, dir);
+      g.quaternion.copy(q);
+      g.position.copy(dir.clone().multiplyScalar(SURFACE_RADIUS));
+
+      const obelisk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.07, 0.16, 0.95, 8),
+        new THREE.MeshStandardMaterial({
+          color: ACCENT.getHex(),
+          emissive: ACCENT.getHex(),
+          emissiveIntensity: 0.4,
+          roughness: 0.4,
+        }),
+      );
+      obelisk.position.y = 0.47;
+      g.add(obelisk);
+
+      const tip = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.13, 0),
+        new THREE.MeshStandardMaterial({
+          color: ACCENT.getHex(),
+          emissive: ACCENT.getHex(),
+          emissiveIntensity: 0.7,
+        }),
+      );
+      tip.position.y = 1.05;
+      g.add(tip);
+
+      const sprite = makeLabelSprite(fact.tag);
+      sprite.position.y = 1.7;
+      g.add(sprite);
+
+      planet.add(g);
+      this.landmarks.push({ group: g, obelisk, tip, sprite, dir });
+    });
+
+    // Rotate so the first landmark starts under the astronaut.
+    if (this.landmarks.length) {
+      planet.quaternion.setFromUnitVectors(this.landmarks[0].dir.clone(), up);
+    }
+
+    root.position.set(0, 0, 0);
+    this.scene.add(root);
+    this.surfaceRoot = root;
+
+    // Hide the system planets/labels; bring the astronaut down to stand.
+    this.planetGroups.forEach((g) => (g.visible = false));
+    this.astronaut.scale.setScalar(1.0);
+
+    this.activeLandmark = null;
+    this.callbacks.onSurfaceFact(null);
+  }
+
+  private exitSurface() {
+    if (this.surfaceRoot) {
+      this.scene.remove(this.surfaceRoot);
+      this.surfaceRoot.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const mat = mesh.material as
+          | (THREE.Material & { map?: THREE.Texture; bumpMap?: THREE.Texture })
+          | undefined;
+        if (mat) {
+          mat.map?.dispose();
+          mat.bumpMap?.dispose();
+          mat.dispose();
+        }
+      });
+    }
+    this.surfaceRoot = null;
+    this.surfacePlanet = null;
+    this.landmarks = [];
+    this.surfaceFacts = [];
+    this.activeLandmark = null;
+    this.mode = "system";
+    this.astronaut.scale.setScalar(1.15);
+    this.planetGroups.forEach((g) => (g.visible = true));
+  }
+
+  /** Rotate the star under the astronaut to "walk". */
+  private walk(dx: number, dy: number) {
+    if (!this.surfacePlanet) return;
+    const k = 0.005;
+    const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -dx * k);
+    const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -dy * k);
+    this.surfacePlanet.quaternion.premultiply(qx).premultiply(qy);
+  }
+
+  private updateSurface(t: number) {
+    if (!this.surfacePlanet) return;
+
+    // Gentle idle drift until the visitor takes over.
+    if (!this.dragging && !this.reducedMotion) {
+      this.walk(0.18, 0);
+    }
+
+    // Find the landmark nearest the point under the astronaut (world up).
+    const up = new THREE.Vector3(0, 1, 0);
+    let best = -1;
+    let bestDot = -1;
+    const wp = new THREE.Vector3();
+    this.landmarks.forEach((lm, j) => {
+      lm.group.getWorldPosition(wp);
+      const dot = wp.clone().normalize().dot(up);
+      if (dot > bestDot) {
+        bestDot = dot;
+        best = j;
+      }
+      // Spin the tip; emphasis handled below.
+      lm.tip.rotation.y += 0.03;
+    });
+    const active = bestDot > ACTIVE_DOT ? best : null;
+
+    this.landmarks.forEach((lm, j) => {
+      const on = j === active;
+      const mat = lm.obelisk.material as THREE.MeshStandardMaterial;
+      const target = on ? 1.1 : 0.4;
+      mat.emissiveIntensity += (target - mat.emissiveIntensity) * 0.15;
+      const s = lm.sprite.scale.x + ((on ? 2.3 : 1.7) - lm.sprite.scale.x) * 0.15;
+      lm.sprite.scale.set(s, s * 0.3, 1);
+    });
+
+    if (active !== this.activeLandmark) {
+      this.activeLandmark = active;
+      this.callbacks.onSurfaceFact(active === null ? null : this.surfaceFacts[active]);
+    }
+
+    // Astronaut stands at the top, faces the camera, idles.
+    const standY = SURFACE_RADIUS + 0.72;
+    this.astronaut.position.set(0, standY + (this.reducedMotion ? 0 : Math.sin(t * 1.6) * 0.03), 0);
+    this.astronaut.rotation.set(0, Math.sin(t * 0.3) * 0.25, 0);
+    this.astronaut.visible = true;
+  }
+
   private tick = () => {
     if (!this.running) return;
     const t = this.clock.getElapsedTime();
@@ -406,47 +593,41 @@ export class PortalScene {
       this.starfields[1].rotation.y = -t * 0.003;
     }
 
-    const focusing = this.focusIndex !== null;
-    this.planetGroups.forEach((group, i) => {
-      this.positionPlanet(group, t);
-      if (!this.reducedMotion) this.planets[i].rotation.y += 0.004;
-
-      const isFocus = this.focusIndex === i;
-      const isHover = !focusing && this.hovered === i;
-      const halo = this.planetHalos[i];
-      const haloTarget = isFocus ? 0.6 : isHover ? 0.5 : focusing ? 0.05 : 0.12;
-      halo.material.opacity += (haloTarget - halo.material.opacity) * 0.12;
-
-      const scaleTarget = isFocus ? 1.4 : focusing ? 0.78 : isHover ? 1.18 : 1;
-      const s = group.scale.x + (scaleTarget - group.scale.x) * 0.12;
-      group.scale.setScalar(s);
-    });
-
-    // Astronaut tumbles and drifts gently in zero-g.
-    if (this.astronaut && !this.reducedMotion) {
-      this.astronaut.rotation.y = Math.sin(t * 0.18) * 0.6 + t * 0.05;
-      this.astronaut.rotation.x = Math.sin(t * 0.13) * 0.18;
-      this.astronaut.rotation.z = Math.cos(t * 0.11) * 0.12;
-      this.astronaut.position.x = 0.4 + Math.sin(t * 0.16) * 0.7;
-      this.astronaut.position.y = 0.3 + Math.cos(t * 0.21) * 0.5;
-      this.astronaut.position.z = 4.2 + Math.sin(t * 0.1) * 0.5;
-    }
-    // Hide the astronaut while a planet is focused so it never covers the card.
-    this.astronaut.visible = !focusing;
-
-    // Camera: ease to the focused planet, or to the free-look default.
     const desiredPos = new THREE.Vector3();
     const desiredLook = new THREE.Vector3();
-    if (this.focusIndex !== null) {
-      const fp = this.planetGroups[this.focusIndex].position;
-      desiredLook.set(fp.x, fp.y - 0.9, fp.z);
-      desiredPos.set(fp.x + 0.2, fp.y + 0.2, fp.z + 5.2);
+
+    if (this.mode === "surface") {
+      this.updateSurface(t);
+      desiredPos.set(0, SURFACE_RADIUS + 3.4, 7.8);
+      desiredLook.set(0, SURFACE_RADIUS - 0.4, 0);
     } else {
+      this.planetGroups.forEach((group, i) => {
+        this.positionPlanet(group, t);
+        if (!this.reducedMotion) this.planets[i].rotation.y += 0.004;
+        const isHover = this.hovered === i;
+        const halo = this.planetHalos[i];
+        const haloTarget = isHover ? 0.5 : 0.12;
+        halo.material.opacity += (haloTarget - halo.material.opacity) * 0.12;
+        const scaleTarget = isHover ? 1.18 : 1;
+        const s = group.scale.x + (scaleTarget - group.scale.x) * 0.12;
+        group.scale.setScalar(s);
+      });
+
+      if (this.astronaut && !this.reducedMotion) {
+        this.astronaut.rotation.y = Math.sin(t * 0.18) * 0.6 + t * 0.05;
+        this.astronaut.rotation.x = Math.sin(t * 0.13) * 0.18;
+        this.astronaut.rotation.z = Math.cos(t * 0.11) * 0.12;
+        this.astronaut.position.x = 0.4 + Math.sin(t * 0.16) * 0.7;
+        this.astronaut.position.y = 0.3 + Math.cos(t * 0.21) * 0.5;
+        this.astronaut.position.z = 4.2 + Math.sin(t * 0.1) * 0.5;
+      }
+
       this.parallax.x += (this.parallaxTarget.x - this.parallax.x) * 0.04;
       this.parallax.y += (this.parallaxTarget.y - this.parallax.y) * 0.04;
       desiredPos.set(this.parallax.x * 2.2, 0.8 + this.parallax.y * 1.4, 13);
       desiredLook.set(0, 0, 0);
     }
+
     this.camPos.lerp(desiredPos, 0.06);
     this.camLookAt.lerp(desiredLook, 0.06);
     this.camera.position.copy(this.camPos);
@@ -454,13 +635,12 @@ export class PortalScene {
 
     this.updateHover();
     this.updateLabels();
-    this.updateDetail();
 
     this.renderer.render(this.scene, this.camera);
   };
 
   private updateHover() {
-    if (this.focusIndex !== null) return; // no hover while focused
+    if (this.mode === "surface") return;
     if (this.frame % 4 !== 0) return;
     if (this.pointer.x < -1) return;
     this.raycaster.setFromCamera(this.pointer, this.camera);
@@ -470,21 +650,19 @@ export class PortalScene {
   }
 
   private setHover(idx: number | null) {
-    if (this.focusIndex !== null) idx = null;
+    if (this.mode === "surface") idx = null;
     this.hovered = idx;
     this.container.style.cursor = idx === null ? "" : "pointer";
     this.labels.forEach((l, i) => l.classList.toggle("is-hover", i === idx));
     this.callbacks.onHover(idx);
   }
 
-  /** Project each planet to screen space and place its HTML label. */
   private updateLabels() {
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
     this.planetGroups.forEach((group, i) => {
       const label = this.labels[i];
-      // While focused, hide every label — the detail card takes over.
-      if (this.focusIndex !== null) {
+      if (this.mode === "surface") {
         label.style.opacity = "0";
         label.style.pointerEvents = "none";
         return;
@@ -502,79 +680,62 @@ export class PortalScene {
     });
   }
 
-  /** Anchor the detail card to the focused planet, clamped on-screen. */
-  private updateDetail() {
-    const el = this.detailEl;
-    if (!el) return;
-    if (this.focusIndex === null) {
-      el.style.opacity = "0";
-      el.style.pointerEvents = "none";
+  /** Called by React: enter surface mode for a star, or leave it. */
+  focus(idx: number | null) {
+    if (idx === null) {
+      if (this.mode === "surface") this.exitSurface();
       return;
     }
-    const group = this.planetGroups[this.focusIndex];
-    const w = this.container.clientWidth;
-    const h = this.container.clientHeight;
-
-    const center = group.position.clone().project(this.camera);
-    // Project a point at the planet's rim to size the vertical gap.
-    const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0);
-    const edge = group.position
-      .clone()
-      .add(right.multiplyScalar(PLANET_RADIUS * group.scale.x))
-      .project(this.camera);
-
-    const cx = (center.x * 0.5 + 0.5) * w;
-    const cy = (-center.y * 0.5 + 0.5) * h;
-    const ex = (edge.x * 0.5 + 0.5) * w;
-    const radiusPx = Math.abs(ex - cx);
-
-    const cardW = el.offsetWidth || 320;
-    const cardH = el.offsetHeight || 240;
-    const margin = 16;
-
-    let x = cx - cardW / 2;
-    let y = cy + radiusPx + 18;
-    x = Math.max(margin, Math.min(x, w - cardW - margin));
-    // If the card would fall off the bottom, place it above the planet instead.
-    if (y + cardH > h - margin) {
-      y = Math.max(margin, cy - radiusPx - cardH - 18);
-    }
-    y = Math.max(margin, Math.min(y, h - cardH - margin));
-
-    // Caret points back at the planet's horizontal position.
-    const caretX = Math.max(16, Math.min(cx - x, cardW - 16));
-    el.style.setProperty("--caret-x", `${caretX}px`);
-    el.style.transform = `translate(${x}px, ${y}px)`;
-    el.style.opacity = "1";
-    el.style.pointerEvents = "auto";
-  }
-
-  setDetailEl(el: HTMLElement | null) {
-    this.detailEl = el;
-  }
-
-  focus(idx: number | null) {
-    this.focusIndex = idx;
-    if (idx !== null) this.setHover(null);
+    this.enterSurface(idx);
   }
 
   private onPointerMove = (e: PointerEvent) => {
     const rect = this.container.getBoundingClientRect();
+    if (this.mode === "surface") {
+      if (this.dragging) {
+        this.walk(e.clientX - this.lastPointer.x, e.clientY - this.lastPointer.y);
+        this.lastPointer.set(e.clientX, e.clientY);
+      }
+      return;
+    }
     const nx = (e.clientX - rect.left) / rect.width;
     const ny = (e.clientY - rect.top) / rect.height;
     this.pointer.set(nx * 2 - 1, -(ny * 2 - 1));
     this.parallaxTarget.set(nx * 2 - 1, -(ny * 2 - 1));
   };
 
+  private onPointerDown = (e: PointerEvent) => {
+    if (this.mode !== "surface") return;
+    this.dragging = true;
+    this.lastPointer.set(e.clientX, e.clientY);
+    this.container.style.cursor = "grabbing";
+  };
+
+  private onPointerUp = () => {
+    if (this.dragging) {
+      this.dragging = false;
+      this.container.style.cursor = this.mode === "surface" ? "grab" : "";
+    }
+  };
+
   private onPointerLeave = () => {
     this.pointer.set(-2, -2);
     this.parallaxTarget.set(0, 0);
-    if (this.focusIndex === null) this.setHover(null);
+    if (this.mode === "system") this.setHover(null);
   };
 
   private onClick = () => {
-    if (this.focusIndex !== null) return;
+    if (this.mode === "surface") return;
     if (this.hovered !== null) this.callbacks.onSelect(this.hovered);
+  };
+
+  private onKey = (e: KeyboardEvent) => {
+    if (this.mode !== "surface") return;
+    const step = 26;
+    if (e.key === "ArrowLeft" || e.key === "a") this.walk(-step, 0);
+    else if (e.key === "ArrowRight" || e.key === "d") this.walk(step, 0);
+    else if (e.key === "ArrowUp" || e.key === "w") this.walk(0, -step);
+    else if (e.key === "ArrowDown" || e.key === "s") this.walk(0, step);
   };
 
   private onResize = () => {
@@ -593,10 +754,14 @@ export class PortalScene {
   dispose() {
     this.running = false;
     this.renderer.setAnimationLoop(null);
+    this.exitSurface();
     window.removeEventListener("resize", this.onResize);
     this.container.removeEventListener("pointermove", this.onPointerMove);
+    this.container.removeEventListener("pointerdown", this.onPointerDown);
+    window.removeEventListener("pointerup", this.onPointerUp);
     this.container.removeEventListener("pointerleave", this.onPointerLeave);
     this.container.removeEventListener("click", this.onClick);
+    window.removeEventListener("keydown", this.onKey);
     document.removeEventListener("visibilitychange", this.onVisibility);
     this.labels.forEach((l) => l.remove());
     this.scene.traverse((obj) => {
