@@ -63,6 +63,50 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* ---- Projects portal (WebGL) labels ---- */
+.portal-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(10, 11, 13, 0.55);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: 0;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.05s linear;
+  will-change: transform, opacity;
+}
+.portal-label__title {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: rgba(236, 235, 228, 0.9);
+}
+.portal-label__tag {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(236, 235, 228, 0.4);
+}
+.portal-label.is-hover,
+.portal-label.is-active {
+  border-color: rgba(198, 242, 78, 0.5);
+  background: rgba(198, 242, 78, 0.08);
+}
+.portal-label.is-active .portal-label__title,
+.portal-label.is-hover .portal-label__title {
+  color: #c6f24e;
+}
+
 /* ---- Scrollbar ---- */
 ::-webkit-scrollbar {
   width: 10px;

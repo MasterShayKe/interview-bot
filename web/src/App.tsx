@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchSpec, streamChat, streamFit, type ChatMessage, type TokenUsage } from "./lib/api.js";
 import { collectClientContext } from "./lib/device.js";
 import BootSequence from "./components/BootSequence.js";
@@ -8,6 +8,7 @@ import Composer from "./components/Composer.js";
 import SpecDialog from "./components/SpecDialog.js";
 import FitDialog from "./components/FitDialog.js";
 import { getSessionDuration } from "./lib/device.js";
+import { navigate, takePendingAsk } from "./lib/router.js";
 
 interface SessionStats {
   messages: number;
@@ -53,15 +54,26 @@ function Footer({
 }) {
   return (
     <footer className="flex items-center justify-between border-t border-white/[0.06] py-5">
-      <button
-        onClick={onOpenSpec}
-        className="group flex items-center gap-2 font-mono text-[0.68rem] uppercase tracking-[0.15em] text-white/40 transition-colors hover:text-accent"
-      >
-        <span className="text-accent/60 transition-colors group-hover:text-accent">
-          {"</>"}
-        </span>
-        View the spec
-      </button>
+      <div className="flex items-center gap-5">
+        <button
+          onClick={onOpenSpec}
+          className="group flex items-center gap-2 font-mono text-[0.68rem] uppercase tracking-[0.15em] text-white/40 transition-colors hover:text-accent"
+        >
+          <span className="text-accent/60 transition-colors group-hover:text-accent">
+            {"</>"}
+          </span>
+          View the spec
+        </button>
+        <button
+          onClick={() => navigate("/portal")}
+          className="group flex items-center gap-2 font-mono text-[0.68rem] uppercase tracking-[0.15em] text-white/40 transition-colors hover:text-accent"
+        >
+          <span className="text-accent/60 transition-colors group-hover:text-accent">
+            ◎
+          </span>
+          Projects portal
+        </button>
+      </div>
       <div className="flex flex-col items-end gap-0.5">
         {stats && (
           <span className="font-mono text-[0.58rem] uppercase tracking-[0.1em] text-white/20">
@@ -206,6 +218,18 @@ export default function App() {
       setBusy(false);
     }
   }
+
+  // A project picked in the portal can request the chat to open with a question.
+  const askConsumed = useRef(false);
+  useEffect(() => {
+    if (askConsumed.current) return;
+    const ask = takePendingAsk();
+    if (!ask) return;
+    askConsumed.current = true;
+    setBootDone(true);
+    onSend(ask);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const started = messages.length > 0;
 
