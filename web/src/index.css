@@ -107,6 +107,32 @@ body {
   color: #c6f24e;
 }
 
+/* Detail card anchored to the focused planet (positioned by the scene). */
+.portal-detail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  /* Only opacity transitions — transform is driven per-frame by the scene. */
+  transition: opacity 0.22s ease;
+  will-change: transform, opacity;
+}
+.portal-detail__caret {
+  position: relative;
+}
+.portal-detail__caret::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: var(--caret-x, 50%);
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  background: rgb(22 24 30 / 0.85);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* ---- Scrollbar ---- */
 ::-webkit-scrollbar {
   width: 10px;

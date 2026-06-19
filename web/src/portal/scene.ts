@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { PortalProject } from "./projects.js";
+import { clusterHue, type PortalProject } from "./projects.js";
 
 // Palette pulled from the app's design tokens (index.css / tailwind.config.js).
 const ACCENT = new THREE.Color("#c6f24e");
@@ -10,7 +10,7 @@ interface SceneCallbacks {
   onSelect: (index: number) => void;
 }
 
-/** Tint the lime accent by a hue offset so each planet reads distinctly. */
+/** Tint the lime accent by a hue offset so each cluster reads distinctly. */
 function tinted(hueShift: number, lift = 0.04): THREE.Color {
   const hsl = { h: 0, s: 0, l: 0 };
   ACCENT.getHSL(hsl);
@@ -44,6 +44,8 @@ function radialTexture(inner: string, outer = "rgba(0,0,0,0)"): THREE.Texture {
   return tex;
 }
 
+const PLANET_RADIUS = 0.8;
+
 export class PortalScene {
   private container: HTMLElement;
   private labelLayer: HTMLElement;
@@ -63,13 +65,16 @@ export class PortalScene {
   private planetHalos: THREE.Sprite[] = [];
   private astronaut!: THREE.Group;
   private labels: HTMLElement[] = [];
+  private detailEl: HTMLElement | null = null;
 
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2(-2, -2);
   private parallax = new THREE.Vector2(0, 0);
   private parallaxTarget = new THREE.Vector2(0, 0);
+  private camPos = new THREE.Vector3(0, 0.8, 13);
+  private camLookAt = new THREE.Vector3(0, 0, 0);
   private hovered: number | null = null;
-  private active: number | null = null;
+  private focusIndex: number | null = null;
   private reducedMotion: boolean;
   private running = true;
   private frame = 0;
@@ -94,7 +99,7 @@ export class PortalScene {
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(INK.getHex(), 0.014);
+    this.scene.fog = new THREE.FogExp2(INK.getHex(), 0.012);
 
     this.camera = new THREE.PerspectiveCamera(
       55,
@@ -102,14 +107,13 @@ export class PortalScene {
       0.1,
       200,
     );
-    this.camera.position.set(0, 0.8, 13);
+    this.camera.position.copy(this.camPos);
 
-    // Lighting: a warm "sun" key, cool fill, low ambient.
     this.scene.add(new THREE.AmbientLight(0x5a6472, 0.6));
-    const sun = new THREE.PointLight(0xfff1d0, 900, 120, 2);
+    const sun = new THREE.PointLight(0xfff1d0, 900, 140, 2);
     sun.position.set(-14, 10, 8);
     this.scene.add(sun);
-    const fill = new THREE.PointLight(ACCENT.getHex(), 120, 60, 2);
+    const fill = new THREE.PointLight(ACCENT.getHex(), 120, 70, 2);
     fill.position.set(10, -6, 6);
     this.scene.add(fill);
 
@@ -169,7 +173,7 @@ export class PortalScene {
       sizeAttenuation: true,
     });
     this.galaxy = new THREE.Points(geo, mat);
-    this.galaxy.position.set(-6, 3, -34);
+    this.galaxy.position.set(-6, 3, -38);
     this.galaxy.rotation.set(-0.9, 0.4, 0.2);
     this.scene.add(this.galaxy);
   }
@@ -198,16 +202,16 @@ export class PortalScene {
       this.scene.add(pts);
       this.starfields.push(pts);
     };
-    make(1200, 90, 0.13, 0.85); // near
-    make(2200, 150, 0.08, 0.5); // far
+    make(1400, 110, 0.13, 0.85); // near
+    make(2600, 170, 0.08, 0.5); // far
   }
 
   /** Large additive color clouds for depth. */
   private buildNebulae() {
-    const defs: Array<[string, number, [number, number, number], number]> = [
-      ["rgba(198,242,78,0.16)", 26, [-12, 6, -26], 0],
-      ["rgba(90,123,255,0.16)", 30, [14, -8, -30], 0],
-      ["rgba(180,90,255,0.12)", 22, [6, 10, -22], 0],
+    const defs: Array<[string, number, [number, number, number]]> = [
+      ["rgba(198,242,78,0.16)", 28, [-14, 6, -28]],
+      ["rgba(90,123,255,0.16)", 32, [16, -8, -32]],
+      ["rgba(180,90,255,0.12)", 24, [6, 12, -24]],
     ];
     for (const [color, scale, pos] of defs) {
       const mat = new THREE.SpriteMaterial({
@@ -224,21 +228,20 @@ export class PortalScene {
     }
   }
 
-  /** One planet per project, orbiting the scene; the clickable target. */
+  /** One planet per project, drifting on a wide orbit; the clickable target. */
   private buildPlanets() {
     const n = this.projects.length;
     this.projects.forEach((project, i) => {
       const group = new THREE.Group();
-      const color = tinted(project.hue, 0.08);
+      const color = tinted(clusterHue[project.cluster], 0.08);
 
       const planet = new THREE.Mesh(
-        new THREE.SphereGeometry(0.95, 48, 48),
+        new THREE.SphereGeometry(PLANET_RADIUS, 48, 48),
         new THREE.MeshStandardMaterial({
           color,
-          roughness: 0.65,
+          roughness: 0.6,
           metalness: 0.15,
           emissive: color.clone().multiplyScalar(0.25),
-          flatShading: false,
         }),
       );
       planet.userData.index = i;
@@ -246,7 +249,7 @@ export class PortalScene {
 
       // Thin atmosphere rim.
       const atmosphere = new THREE.Mesh(
-        new THREE.SphereGeometry(1.06, 48, 48),
+        new THREE.SphereGeometry(PLANET_RADIUS * 1.12, 48, 48),
         new THREE.MeshBasicMaterial({
           color,
           transparent: true,
@@ -258,10 +261,10 @@ export class PortalScene {
       );
       group.add(atmosphere);
 
-      // Every other planet gets a ring system.
-      if (i % 2 === 1) {
+      // Every third planet gets a ring system.
+      if (i % 3 === 2) {
         const ring = new THREE.Mesh(
-          new THREE.RingGeometry(1.4, 2.1, 64),
+          new THREE.RingGeometry(PLANET_RADIUS * 1.5, PLANET_RADIUS * 2.2, 64),
           new THREE.MeshBasicMaterial({
             color,
             transparent: true,
@@ -280,20 +283,19 @@ export class PortalScene {
         new THREE.SpriteMaterial({
           map: radialTexture(`#${color.getHexString()}`),
           transparent: true,
-          opacity: 0,
+          opacity: 0.12,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
       );
-      halo.scale.setScalar(4);
+      halo.scale.setScalar(3.4);
       group.add(halo);
       this.planetHalos.push(halo);
 
-      // Spread planets around a wide orbit at varied heights/depths.
-      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
-      group.userData.angle = angle;
-      group.userData.radius = 6.5;
-      group.userData.yOffset = (i - (n - 1) / 2) * 1.4;
+      // Spread planets around a wide orbit at varied heights and depths.
+      group.userData.angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      group.userData.radius = 6.0 + (i % 3) * 1.1;
+      group.userData.yOffset = (i / (n - 1) - 0.5) * 5.4;
       group.userData.bob = Math.random() * Math.PI * 2;
       this.positionPlanet(group, 0);
 
@@ -319,15 +321,15 @@ export class PortalScene {
 
   private positionPlanet(group: THREE.Group, t: number) {
     const angle =
-      (group.userData.angle as number) + (this.reducedMotion ? 0 : t * 0.045);
+      (group.userData.angle as number) + (this.reducedMotion ? 0 : t * 0.04);
     const radius = group.userData.radius as number;
     const bob = this.reducedMotion
       ? 0
-      : Math.sin(t * 0.5 + (group.userData.bob as number)) * 0.4;
+      : Math.sin(t * 0.45 + (group.userData.bob as number)) * 0.4;
     group.position.set(
       Math.cos(angle) * radius,
       (group.userData.yOffset as number) + bob,
-      Math.sin(angle) * 2.2 - 1,
+      Math.sin(angle) * 2.4 - 1,
     );
   }
 
@@ -352,14 +354,12 @@ export class PortalScene {
       roughness: 0.4,
     });
 
-    // Torso + backpack.
     const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.42, 6, 12), suit);
     a.add(torso);
     const pack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.28), dark);
     pack.position.set(0, 0.02, -0.34);
     a.add(pack);
 
-    // Helmet + dark visor + accent rim.
     const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.34, 24, 24), suit);
     helmet.position.set(0, 0.62, 0);
     a.add(helmet);
@@ -372,7 +372,6 @@ export class PortalScene {
     rim.scale.set(1, 0.9, 1);
     a.add(rim);
 
-    // Limbs.
     const limbGeo = new THREE.CapsuleGeometry(0.12, 0.46, 5, 10);
     const mkLimb = (x: number, y: number, z: number, rz: number, rx: number) => {
       const limb = new THREE.Mesh(limbGeo, suit);
@@ -381,17 +380,16 @@ export class PortalScene {
       limb.rotation.x = rx;
       a.add(limb);
     };
-    mkLimb(-0.5, 0.12, 0.05, 0.7, 0.3); // left arm out
-    mkLimb(0.5, 0.05, -0.05, -0.5, -0.4); // right arm
-    mkLimb(-0.2, -0.7, 0.05, 0.18, 0.25); // left leg
-    mkLimb(0.22, -0.72, -0.05, -0.12, -0.2); // right leg
+    mkLimb(-0.5, 0.12, 0.05, 0.7, 0.3);
+    mkLimb(0.5, 0.05, -0.05, -0.5, -0.4);
+    mkLimb(-0.2, -0.7, 0.05, 0.18, 0.25);
+    mkLimb(0.22, -0.72, -0.05, -0.12, -0.2);
 
-    // Chest accent light.
     const chest = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.04), accentMat);
     chest.position.set(0, 0.08, 0.34);
     a.add(chest);
 
-    a.scale.setScalar(1.25);
+    a.scale.setScalar(1.15);
     a.position.set(0.4, 0.3, 4.2);
     this.astronaut = a;
     this.scene.add(a);
@@ -408,16 +406,19 @@ export class PortalScene {
       this.starfields[1].rotation.y = -t * 0.003;
     }
 
-    // Planets orbit, spin, and pulse their halo on focus.
+    const focusing = this.focusIndex !== null;
     this.planetGroups.forEach((group, i) => {
       this.positionPlanet(group, t);
       if (!this.reducedMotion) this.planets[i].rotation.y += 0.004;
-      const isFocus = this.hovered === i || this.active === i;
+
+      const isFocus = this.focusIndex === i;
+      const isHover = !focusing && this.hovered === i;
       const halo = this.planetHalos[i];
-      const target = isFocus ? 0.5 : 0.12;
-      halo.material.opacity += (target - halo.material.opacity) * 0.12;
-      const targetScale = isFocus ? 1.18 : 1;
-      const s = group.scale.x + (targetScale - group.scale.x) * 0.12;
+      const haloTarget = isFocus ? 0.6 : isHover ? 0.5 : focusing ? 0.05 : 0.12;
+      halo.material.opacity += (haloTarget - halo.material.opacity) * 0.12;
+
+      const scaleTarget = isFocus ? 1.4 : focusing ? 0.78 : isHover ? 1.18 : 1;
+      const s = group.scale.x + (scaleTarget - group.scale.x) * 0.12;
       group.scale.setScalar(s);
     });
 
@@ -430,21 +431,36 @@ export class PortalScene {
       this.astronaut.position.y = 0.3 + Math.cos(t * 0.21) * 0.5;
       this.astronaut.position.z = 4.2 + Math.sin(t * 0.1) * 0.5;
     }
+    // Hide the astronaut while a planet is focused so it never covers the card.
+    this.astronaut.visible = !focusing;
 
-    // Pointer parallax.
-    this.parallax.x += (this.parallaxTarget.x - this.parallax.x) * 0.04;
-    this.parallax.y += (this.parallaxTarget.y - this.parallax.y) * 0.04;
-    this.camera.position.x = this.parallax.x * 2.2;
-    this.camera.position.y = 0.8 + this.parallax.y * 1.4;
-    this.camera.lookAt(0, 0, 0);
+    // Camera: ease to the focused planet, or to the free-look default.
+    const desiredPos = new THREE.Vector3();
+    const desiredLook = new THREE.Vector3();
+    if (this.focusIndex !== null) {
+      const fp = this.planetGroups[this.focusIndex].position;
+      desiredLook.set(fp.x, fp.y - 0.9, fp.z);
+      desiredPos.set(fp.x + 0.2, fp.y + 0.2, fp.z + 5.2);
+    } else {
+      this.parallax.x += (this.parallaxTarget.x - this.parallax.x) * 0.04;
+      this.parallax.y += (this.parallaxTarget.y - this.parallax.y) * 0.04;
+      desiredPos.set(this.parallax.x * 2.2, 0.8 + this.parallax.y * 1.4, 13);
+      desiredLook.set(0, 0, 0);
+    }
+    this.camPos.lerp(desiredPos, 0.06);
+    this.camLookAt.lerp(desiredLook, 0.06);
+    this.camera.position.copy(this.camPos);
+    this.camera.lookAt(this.camLookAt);
 
     this.updateHover();
     this.updateLabels();
+    this.updateDetail();
 
     this.renderer.render(this.scene, this.camera);
   };
 
   private updateHover() {
+    if (this.focusIndex !== null) return; // no hover while focused
     if (this.frame % 4 !== 0) return;
     if (this.pointer.x < -1) return;
     this.raycaster.setFromCamera(this.pointer, this.camera);
@@ -454,6 +470,7 @@ export class PortalScene {
   }
 
   private setHover(idx: number | null) {
+    if (this.focusIndex !== null) idx = null;
     this.hovered = idx;
     this.container.style.cursor = idx === null ? "" : "pointer";
     this.labels.forEach((l, i) => l.classList.toggle("is-hover", i === idx));
@@ -465,22 +482,80 @@ export class PortalScene {
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
     this.planetGroups.forEach((group, i) => {
-      const v = group.position.clone().project(this.camera);
       const label = this.labels[i];
+      // While focused, hide every label — the detail card takes over.
+      if (this.focusIndex !== null) {
+        label.style.opacity = "0";
+        label.style.pointerEvents = "none";
+        return;
+      }
+      label.style.pointerEvents = "auto";
+      const v = group.position.clone().project(this.camera);
       if (v.z > 1) {
         label.style.opacity = "0";
         return;
       }
       const x = (v.x * 0.5 + 0.5) * w;
       const y = (-v.y * 0.5 + 0.5) * h;
-      label.style.transform = `translate(-50%, -50%) translate(${x}px, ${y + 70}px)`;
+      label.style.transform = `translate(-50%, -50%) translate(${x}px, ${y + 58}px)`;
       label.style.opacity = "1";
-      label.classList.toggle("is-active", this.active === i);
     });
   }
 
-  setActive(idx: number | null) {
-    this.active = idx;
+  /** Anchor the detail card to the focused planet, clamped on-screen. */
+  private updateDetail() {
+    const el = this.detailEl;
+    if (!el) return;
+    if (this.focusIndex === null) {
+      el.style.opacity = "0";
+      el.style.pointerEvents = "none";
+      return;
+    }
+    const group = this.planetGroups[this.focusIndex];
+    const w = this.container.clientWidth;
+    const h = this.container.clientHeight;
+
+    const center = group.position.clone().project(this.camera);
+    // Project a point at the planet's rim to size the vertical gap.
+    const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0);
+    const edge = group.position
+      .clone()
+      .add(right.multiplyScalar(PLANET_RADIUS * group.scale.x))
+      .project(this.camera);
+
+    const cx = (center.x * 0.5 + 0.5) * w;
+    const cy = (-center.y * 0.5 + 0.5) * h;
+    const ex = (edge.x * 0.5 + 0.5) * w;
+    const radiusPx = Math.abs(ex - cx);
+
+    const cardW = el.offsetWidth || 320;
+    const cardH = el.offsetHeight || 240;
+    const margin = 16;
+
+    let x = cx - cardW / 2;
+    let y = cy + radiusPx + 18;
+    x = Math.max(margin, Math.min(x, w - cardW - margin));
+    // If the card would fall off the bottom, place it above the planet instead.
+    if (y + cardH > h - margin) {
+      y = Math.max(margin, cy - radiusPx - cardH - 18);
+    }
+    y = Math.max(margin, Math.min(y, h - cardH - margin));
+
+    // Caret points back at the planet's horizontal position.
+    const caretX = Math.max(16, Math.min(cx - x, cardW - 16));
+    el.style.setProperty("--caret-x", `${caretX}px`);
+    el.style.transform = `translate(${x}px, ${y}px)`;
+    el.style.opacity = "1";
+    el.style.pointerEvents = "auto";
+  }
+
+  setDetailEl(el: HTMLElement | null) {
+    this.detailEl = el;
+  }
+
+  focus(idx: number | null) {
+    this.focusIndex = idx;
+    if (idx !== null) this.setHover(null);
   }
 
   private onPointerMove = (e: PointerEvent) => {
@@ -494,10 +569,11 @@ export class PortalScene {
   private onPointerLeave = () => {
     this.pointer.set(-2, -2);
     this.parallaxTarget.set(0, 0);
-    this.setHover(null);
+    if (this.focusIndex === null) this.setHover(null);
   };
 
   private onClick = () => {
+    if (this.focusIndex !== null) return;
     if (this.hovered !== null) this.callbacks.onSelect(this.hovered);
   };
 
