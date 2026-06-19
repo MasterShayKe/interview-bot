@@ -75,6 +75,8 @@ export class PortalScene {
   private planetGroups: THREE.Group[] = [];
   private planetHalos: THREE.Sprite[] = [];
   private astronaut!: THREE.Group;
+  private alien!: THREE.Group;
+  private alienArm!: THREE.Mesh;
   private labels: HTMLElement[] = [];
 
   // Surface ("walk on the star") mode.
@@ -139,6 +141,7 @@ export class PortalScene {
     this.buildNebulae();
     this.buildPlanets();
     this.buildAstronaut();
+    this.buildAlien();
 
     window.addEventListener("resize", this.onResize);
     container.addEventListener("pointermove", this.onPointerMove);
@@ -383,10 +386,12 @@ export class PortalScene {
       limb.rotation.x = rx;
       a.add(limb);
     };
-    mkLimb(-0.5, 0.12, 0.05, 0.7, 0.3);
-    mkLimb(0.5, 0.05, -0.05, -0.5, -0.4);
-    mkLimb(-0.2, -0.7, 0.05, 0.18, 0.25);
-    mkLimb(0.22, -0.72, -0.05, -0.12, -0.2);
+    // Neutral standing pose (arms down at the sides); the zero-g "drift" look
+    // comes from the whole-body tumble applied in system mode.
+    mkLimb(-0.42, -0.02, 0.02, 0.28, 0.05);
+    mkLimb(0.42, -0.02, -0.02, -0.28, 0.05);
+    mkLimb(-0.17, -0.78, 0.02, 0.06, 0.02);
+    mkLimb(0.17, -0.8, -0.02, -0.06, 0.02);
 
     const chest = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.04), accentMat);
     chest.position.set(0, 0.08, 0.34);
@@ -395,6 +400,87 @@ export class PortalScene {
     a.scale.setScalar(1.15);
     a.position.set(0.4, 0.3, 4.2);
     this.astronaut = a;
+    this.scene.add(a);
+  }
+
+  /** Low-poly alien guide that presents each star's project. */
+  private buildAlien() {
+    const a = new THREE.Group();
+    const skin = new THREE.MeshStandardMaterial({
+      color: 0x86d98f,
+      roughness: 0.5,
+      metalness: 0.05,
+      emissive: 0x14361b,
+      emissiveIntensity: 0.35,
+      flatShading: true,
+    });
+    const skinHead = new THREE.MeshStandardMaterial({
+      color: 0x9be0a3,
+      roughness: 0.45,
+      flatShading: true,
+    });
+    const eyeMat = new THREE.MeshStandardMaterial({
+      color: 0x05060a,
+      roughness: 0.2,
+      metalness: 0.4,
+    });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: ACCENT.getHex(),
+      emissive: ACCENT.getHex(),
+      emissiveIntensity: 0.9,
+    });
+
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.46, 6, 12), skin);
+    a.add(body);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 24, 24), skinHead);
+    head.position.set(0, 0.62, 0);
+    head.scale.set(1, 1.22, 0.92);
+    a.add(head);
+
+    const mkEye = (x: number) => {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), eyeMat);
+      e.position.set(x, 0.6, 0.3);
+      e.scale.set(0.7, 1.25, 0.5);
+      e.rotation.z = x > 0 ? -0.4 : 0.4;
+      a.add(e);
+    };
+    mkEye(-0.15);
+    mkEye(0.15);
+
+    const mkAnt = (x: number) => {
+      const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.34, 6), skinHead);
+      stalk.position.set(x, 0.96, 0);
+      stalk.rotation.z = x > 0 ? -0.25 : 0.25;
+      a.add(stalk);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), accentMat);
+      bulb.position.set(x * 1.3, 1.14, 0);
+      a.add(bulb);
+    };
+    mkAnt(-0.12);
+    mkAnt(0.12);
+
+    const armGeo = new THREE.CapsuleGeometry(0.07, 0.4, 5, 10);
+    const raised = new THREE.Mesh(armGeo, skin);
+    raised.position.set(-0.34, 0.2, 0.05);
+    raised.rotation.z = 1.15; // presenting, raised outward
+    a.add(raised);
+    const side = new THREE.Mesh(armGeo, skin);
+    side.position.set(0.32, -0.02, 0);
+    side.rotation.z = -0.35;
+    a.add(side);
+
+    const legGeo = new THREE.CapsuleGeometry(0.08, 0.3, 5, 10);
+    const ll = new THREE.Mesh(legGeo, skin);
+    ll.position.set(-0.12, -0.5, 0);
+    a.add(ll);
+    const rl = new THREE.Mesh(legGeo, skin);
+    rl.position.set(0.12, -0.52, 0);
+    a.add(rl);
+
+    a.visible = false;
+    this.alien = a;
+    this.alienArm = raised;
     this.scene.add(a);
   }
 
@@ -407,12 +493,15 @@ export class PortalScene {
     this.surfaceFacts = projectFacts(project);
 
     const root = new THREE.Group();
+    const surfTex = makeSurfaceTexture(project);
     const planet = new THREE.Mesh(
-      new THREE.SphereGeometry(SURFACE_RADIUS, 96, 96),
+      new THREE.SphereGeometry(SURFACE_RADIUS, 192, 192),
       new THREE.MeshStandardMaterial({
-        map: makeSurfaceTexture(project),
-        bumpMap: makeSurfaceTexture(project),
-        bumpScale: 0.6,
+        map: surfTex,
+        bumpMap: surfTex,
+        bumpScale: 0.5,
+        displacementMap: surfTex,
+        displacementScale: 0.24,
         roughness: 0.95,
         metalness: 0.05,
         emissive: clusterColor(project).multiplyScalar(0.12),
@@ -454,7 +543,7 @@ export class PortalScene {
       g.position.copy(dir.clone().multiplyScalar(SURFACE_RADIUS));
 
       const obelisk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.07, 0.16, 0.95, 8),
+        new THREE.CylinderGeometry(0.06, 0.13, 0.7, 8),
         new THREE.MeshStandardMaterial({
           color: ACCENT.getHex(),
           emissive: ACCENT.getHex(),
@@ -462,22 +551,23 @@ export class PortalScene {
           roughness: 0.4,
         }),
       );
-      obelisk.position.y = 0.47;
+      obelisk.position.y = 0.35;
       g.add(obelisk);
 
       const tip = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(0.13, 0),
+        new THREE.IcosahedronGeometry(0.12, 0),
         new THREE.MeshStandardMaterial({
           color: ACCENT.getHex(),
           emissive: ACCENT.getHex(),
           emissiveIntensity: 0.7,
         }),
       );
-      tip.position.y = 1.05;
+      tip.position.y = 0.8;
       g.add(tip);
 
       const sprite = makeLabelSprite(fact.tag);
-      sprite.position.y = 1.7;
+      sprite.scale.set(1.2, 0.36, 1);
+      sprite.position.y = 1.45;
       g.add(sprite);
 
       planet.add(g);
@@ -493,9 +583,11 @@ export class PortalScene {
     this.scene.add(root);
     this.surfaceRoot = root;
 
-    // Hide the system planets/labels; bring the astronaut down to stand.
+    // Hide the system planets/labels; bring the astronaut down to stand and
+    // wake the alien guide.
     this.planetGroups.forEach((g) => (g.visible = false));
-    this.astronaut.scale.setScalar(1.0);
+    this.astronaut.scale.setScalar(1.2);
+    this.alien.visible = true;
 
     this.activeLandmark = null;
     this.callbacks.onSurfaceFact(null);
@@ -524,6 +616,7 @@ export class PortalScene {
     this.activeLandmark = null;
     this.mode = "system";
     this.astronaut.scale.setScalar(1.15);
+    if (this.alien) this.alien.visible = false;
     this.planetGroups.forEach((g) => (g.visible = true));
   }
 
@@ -541,22 +634,22 @@ export class PortalScene {
 
     // Gentle idle drift until the visitor takes over.
     if (!this.dragging && !this.reducedMotion) {
-      this.walk(0.18, 0);
+      this.walk(0.16, 0);
     }
 
-    // Find the landmark nearest the point under the astronaut (world up).
-    const up = new THREE.Vector3(0, 1, 0);
+    // "Reach" point is in FRONT of and below the astronaut (down the near
+    // slope) so the active landmark sits ahead of the figure, never inside it.
+    const reach = new THREE.Vector3(0, 1, 0.55).normalize();
     let best = -1;
     let bestDot = -1;
     const wp = new THREE.Vector3();
     this.landmarks.forEach((lm, j) => {
       lm.group.getWorldPosition(wp);
-      const dot = wp.clone().normalize().dot(up);
+      const dot = wp.clone().normalize().dot(reach);
       if (dot > bestDot) {
         bestDot = dot;
         best = j;
       }
-      // Spin the tip; emphasis handled below.
       lm.tip.rotation.y += 0.03;
     });
     const active = bestDot > ACTIVE_DOT ? best : null;
@@ -564,10 +657,11 @@ export class PortalScene {
     this.landmarks.forEach((lm, j) => {
       const on = j === active;
       const mat = lm.obelisk.material as THREE.MeshStandardMaterial;
-      const target = on ? 1.1 : 0.4;
-      mat.emissiveIntensity += (target - mat.emissiveIntensity) * 0.15;
-      const s = lm.sprite.scale.x + ((on ? 2.3 : 1.7) - lm.sprite.scale.x) * 0.15;
+      mat.emissiveIntensity += ((on ? 1.1 : 0.4) - mat.emissiveIntensity) * 0.15;
+      const s = lm.sprite.scale.x + ((on ? 1.65 : 1.2) - lm.sprite.scale.x) * 0.15;
       lm.sprite.scale.set(s, s * 0.3, 1);
+      const sm = lm.sprite.material as THREE.SpriteMaterial;
+      sm.opacity += ((on ? 1 : 0.55) - sm.opacity) * 0.12;
     });
 
     if (active !== this.activeLandmark) {
@@ -575,11 +669,28 @@ export class PortalScene {
       this.callbacks.onSurfaceFact(active === null ? null : this.surfaceFacts[active]);
     }
 
-    // Astronaut stands at the top, faces the camera, idles.
-    const standY = SURFACE_RADIUS + 0.72;
-    this.astronaut.position.set(0, standY + (this.reducedMotion ? 0 : Math.sin(t * 1.6) * 0.03), 0);
-    this.astronaut.rotation.set(0, Math.sin(t * 0.3) * 0.25, 0);
+    const up = new THREE.Vector3(0, 1, 0);
+
+    // Astronaut (the visitor) stands planted at the top, facing the camera.
+    const standY = SURFACE_RADIUS + 0.95;
+    this.astronaut.position.set(
+      0,
+      standY + (this.reducedMotion ? 0 : Math.sin(t * 1.6) * 0.03),
+      0,
+    );
+    this.astronaut.rotation.set(0, Math.sin(t * 0.3) * 0.2, 0);
     this.astronaut.visible = true;
+
+    // Alien guide stands on the near slope, presenting toward the visitor.
+    const adir = new THREE.Vector3(0.5, 1, 0.32).normalize();
+    this.alien.position.copy(adir.clone().multiplyScalar(SURFACE_RADIUS + 0.62));
+    this.alien.quaternion.setFromUnitVectors(up, adir);
+    this.alien.rotateY(-0.9 + (this.reducedMotion ? 0 : Math.sin(t * 0.5) * 0.08));
+    if (!this.reducedMotion) {
+      this.alienArm.rotation.z = 1.15 + Math.sin(t * 2) * 0.14;
+      this.alien.position.y += Math.sin(t * 1.4) * 0.03;
+    }
+    this.alien.visible = true;
   }
 
   private tick = () => {
@@ -598,8 +709,8 @@ export class PortalScene {
 
     if (this.mode === "surface") {
       this.updateSurface(t);
-      desiredPos.set(0, SURFACE_RADIUS + 3.4, 7.8);
-      desiredLook.set(0, SURFACE_RADIUS - 0.4, 0);
+      desiredPos.set(0, SURFACE_RADIUS + 2.4, 7.2);
+      desiredLook.set(0, SURFACE_RADIUS + 0.15, 0);
     } else {
       this.planetGroups.forEach((group, i) => {
         this.positionPlanet(group, t);
