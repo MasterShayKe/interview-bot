@@ -81,15 +81,16 @@ export function makeSurfaceTexture(p: PortalProject): THREE.CanvasTexture {
   ctx.fillRect(0, 0, w, h);
 
   const rand = mulberry32(hashString(p.id));
+  const rgba = (c: THREE.Color, a: number) =>
+    `rgba(${(c.r * 255) | 0},${(c.g * 255) | 0},${(c.b * 255) | 0},${a})`;
 
-  // Craters / surface mottling.
-  for (let i = 0; i < 90; i++) {
+  // Broad highlands — gentle raised regions (push out under displacement).
+  for (let i = 0; i < 14; i++) {
     const cx = rand() * w;
     const cy = rand() * h;
-    const r = 6 + rand() * 46;
+    const r = 60 + rand() * 130;
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    const shade = rand() > 0.5 ? dark : lite;
-    g.addColorStop(0, `rgba(${(shade.r * 255) | 0},${(shade.g * 255) | 0},${(shade.b * 255) | 0},0.5)`);
+    g.addColorStop(0, rgba(lite, 0.35));
     g.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -97,16 +98,41 @@ export function makeSurfaceTexture(p: PortalProject): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Printed title across the surface.
+  // Craters — dark rims and basins (push in).
+  for (let i = 0; i < 150; i++) {
+    const cx = rand() * w;
+    const cy = rand() * h;
+    const r = 5 + rand() * 44;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    const deep = rand() > 0.55;
+    g.addColorStop(0, rgba(deep ? dark : lite, 0.55));
+    g.addColorStop(0.7, rgba(deep ? dark : lite, 0.12));
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Fine speckle for texture.
+  for (let i = 0; i < 1600; i++) {
+    ctx.fillStyle = rgba(rand() > 0.5 ? lite : dark, 0.12);
+    ctx.fillRect(rand() * w, rand() * h, 2, 2);
+  }
+
+  // Printed title across the surface, with a soft dark backing for legibility.
   ctx.save();
-  ctx.globalAlpha = 0.16;
-  ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "700 88px 'Schibsted Grotesk', system-ui, sans-serif";
+  ctx.font = "700 92px 'Schibsted Grotesk', system-ui, sans-serif";
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(0,0,0,0.18)";
+  ctx.strokeText(p.title.toUpperCase(), w / 2, h * 0.42);
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "#ffffff";
   ctx.fillText(p.title.toUpperCase(), w / 2, h * 0.42);
-  ctx.globalAlpha = 0.12;
-  ctx.font = "500 30px 'JetBrains Mono', monospace";
+  ctx.globalAlpha = 0.16;
+  ctx.font = "500 32px 'JetBrains Mono', monospace";
   ctx.fillText(p.tagline.toUpperCase(), w / 2, h * 0.58);
   ctx.restore();
 
