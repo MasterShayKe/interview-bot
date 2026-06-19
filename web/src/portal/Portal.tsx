@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { PortalScene } from "./scene.js";
 import { projects, clusterLabel } from "./projects.js";
+import type { SurfaceFact } from "./surface.js";
 import { navigate } from "../lib/router.js";
 
 export default function Portal() {
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const labelLayerRef = useRef<HTMLDivElement>(null);
-  const detailRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<PortalScene | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
+  const [fact, setFact] = useState<SurfaceFact | null>(null);
 
   useEffect(() => {
     const host = canvasHostRef.current;
@@ -18,8 +19,8 @@ export default function Portal() {
     const scene = new PortalScene(host, labels, projects, {
       onHover: () => {},
       onSelect: (i) => setSelected(i),
+      onSurfaceFact: (f) => setFact(f),
     });
-    scene.setDetailEl(detailRef.current);
     sceneRef.current = scene;
     return () => {
       scene.dispose();
@@ -27,12 +28,13 @@ export default function Portal() {
     };
   }, []);
 
-  // Drive the scene's camera focus + planet emphasis from the selection.
+  // Enter/leave the star surface from the selection.
   useEffect(() => {
     sceneRef.current?.focus(selected);
+    if (selected === null) setFact(null);
   }, [selected]);
 
-  // Close the detail card on Escape.
+  // Esc leaves the surface.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSelected(null);
@@ -57,112 +59,88 @@ export default function Portal() {
       {/* Top bar */}
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between p-5 sm:p-7">
         <div className="leading-tight">
-          <div className="font-mono text-[0.62rem] uppercase tracking-[0.26em] text-accent/90">
-            Projects Portal
-          </div>
-          <div className="mt-1 font-mono text-[0.58rem] uppercase tracking-[0.2em] text-white/35">
-            Drift the system · {projects.length} worlds · WebGL
-          </div>
+          {project ? (
+            <>
+              <div className="font-mono text-[0.58rem] uppercase tracking-[0.2em] text-accent/90">
+                {clusterLabel[project.cluster]} · on the surface
+              </div>
+              <div className="mt-1 font-display text-2xl leading-none text-white">
+                {project.title}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="font-mono text-[0.62rem] uppercase tracking-[0.26em] text-accent/90">
+                Projects Portal
+              </div>
+              <div className="mt-1 font-mono text-[0.58rem] uppercase tracking-[0.2em] text-white/35">
+                Drift the system · {projects.length} worlds · WebGL
+              </div>
+            </>
+          )}
         </div>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => (project ? setSelected(null) : navigate("/"))}
           className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-white/60 backdrop-blur transition-colors hover:border-accent/40 hover:text-accent"
         >
-          <span className="text-accent/60">←</span> Back to chat
+          <span className="text-accent/60">←</span>
+          {project ? "Leave star" : "Back to chat"}
         </button>
       </header>
 
       {/* Hint */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex justify-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
         <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-white/30">
-          {project ? "Esc / tap away to close" : "Tap a planet to explore a project"}
+          {project
+            ? "Drag to walk · reach a marker to learn · Esc to leave"
+            : "Tap a planet to land and explore"}
         </span>
       </div>
 
-      {/* Tap-away backdrop while a planet is focused */}
+      {/* Surface fact caption — what the astronaut has walked up to */}
       {project && (
-        <button
-          aria-label="Close project details"
-          onClick={() => setSelected(null)}
-          className="absolute inset-0 z-20 cursor-default"
-        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-12 z-30 flex justify-center px-4 sm:bottom-16">
+          <div
+            className={
+              "w-[min(92vw,40rem)] rounded-2xl border border-white/10 bg-ink-800/80 p-4 backdrop-blur-xl transition-all duration-300 sm:p-5 " +
+              (fact ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0")
+            }
+          >
+            {fact && (
+              <div className="pointer-events-auto">
+                <div className="font-mono text-[0.58rem] uppercase tracking-[0.22em] text-accent/90">
+                  {fact.tag}
+                </div>
+                <p className="mt-1.5 text-[0.9rem] leading-relaxed text-white/80">
+                  {fact.text}
+                </p>
+                {fact.url && (
+                  <a
+                    href={fact.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/[0.06] px-3 py-1.5 text-[0.78rem] text-white transition-colors hover:border-accent/60 hover:bg-accent/[0.1]"
+                  >
+                    Open {fact.text}
+                    <span className="font-mono text-accent/70">↗</span>
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Detail card — positioned on the focused planet by the scene each frame */}
-      <div
-        ref={detailRef}
-        className="portal-detail z-30 w-[min(86vw,22rem)]"
-        style={{ opacity: 0, pointerEvents: "none" }}
-      >
-        {project && (
-          <div className="portal-detail__caret animate-fade-up rounded-2xl border border-white/10 bg-ink-800/85 p-5 backdrop-blur-xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-mono text-[0.56rem] uppercase tracking-[0.2em] text-accent/90">
-                  {clusterLabel[project.cluster]}
-                </div>
-                <h2 className="mt-1.5 font-display text-2xl leading-tight text-white">
-                  {project.title}
-                </h2>
-                <div className="mt-0.5 text-[0.8rem] text-white/45">
-                  {project.tagline}
-                </div>
-              </div>
-              <button
-                onClick={() => setSelected(null)}
-                className="shrink-0 rounded-lg border border-white/10 px-2 py-0.5 font-mono text-xs text-white/50 transition-colors hover:border-accent/40 hover:text-accent"
-                aria-label="Close project details"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="mt-3 text-[0.85rem] leading-relaxed text-white/65">
-              {project.summary}
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {project.stack.map((tech) => (
-                <span
-                  key={tech}
-                  className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 font-mono text-[0.62rem] tracking-wide text-white/55"
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-4 flex items-center gap-2">
-              {project.link.url ? (
-                <a
-                  href={project.link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[0.78rem] text-white/70 transition-colors hover:border-accent/40 hover:text-accent"
-                >
-                  {project.link.label}
-                  <span className="font-mono text-accent/60">↗</span>
-                </a>
-              ) : (
-                <span className="rounded-lg border border-white/10 px-3 py-1.5 font-mono text-[0.62rem] uppercase tracking-[0.12em] text-white/35">
-                  {project.link.label}
-                </span>
-              )}
-              <button
-                onClick={() =>
-                  navigate("/", { ask: `Tell me more about ${project.title}.` })
-                }
-                className="group ml-auto flex items-center gap-1.5 rounded-lg border border-accent/25 bg-accent/[0.06] px-3 py-1.5 text-[0.78rem] font-medium text-white transition-all hover:border-accent/50 hover:bg-accent/[0.1]"
-              >
-                Ask the agent
-                <span className="font-mono text-accent/60 transition-colors group-hover:text-accent">
-                  →
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Ask-the-agent hand-off, always available on the surface */}
+      {project && (
+        <button
+          onClick={() => navigate("/", { ask: `Tell me more about ${project.title}.` })}
+          className="group absolute bottom-12 right-4 z-30 hidden items-center gap-1.5 rounded-full border border-accent/25 bg-accent/[0.06] px-4 py-2 text-[0.78rem] font-medium text-white transition-all hover:border-accent/50 hover:bg-accent/[0.1] sm:bottom-16 sm:flex"
+        >
+          Ask the agent
+          <span className="font-mono text-accent/60 transition-colors group-hover:text-accent">→</span>
+        </button>
+      )}
     </div>
   );
 }
