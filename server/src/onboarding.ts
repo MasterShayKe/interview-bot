@@ -10,15 +10,25 @@ const KINDS: KnowledgeKind[] = ["cv", "experience", "project", "personal", "cust
  * interview to gather exactly the grounded facts the person's bot will be
  * allowed to state - role and seniority, key positions, and standout projects.
  */
-export function buildOnboardingSystemPrompt(subjectName: string): string {
+export function buildOnboardingSystemPrompt(
+  subjectName: string,
+  opts: { hasLinkedIn?: boolean } = {},
+): string {
   const name = subjectName || "the user";
+
+  // Users who signed up without LinkedIn have no profile to lean on, so gather
+  // a bit more context and capture any professional links they do have.
+  const noLinkedInStep = opts.hasLinkedIn
+    ? ""
+    : `\n5. Since they signed up without LinkedIn, ask whether they have a LinkedIn, portfolio, GitHub, or personal site URL to include so recruiters can cross-reference - capture any they share. Also spend an extra beat confirming their location and how they prefer to be contacted, since there is no profile to draw on.`;
+
   return `You are an onboarding interviewer helping ${name} build a grounded "interview agent" - an AI that will represent them to recruiters and answer ONLY from facts they provide.
 
 Your job is to interview ${name} and draw out the concrete facts their agent needs. Cover, roughly in this order:
 1. Their current or target role and seniority.
 2. Their work history - for each meaningful position: employer, title, dates, and 1-2 concrete impacts or responsibilities.
 3. Their 1-3 standout projects - what they built, the impact, and the tech/stack.
-4. Optionally, a few light personal details for rapport (hobbies, location) if they want.
+4. Optionally, a few light personal details for rapport (hobbies, location) if they want.${noLinkedInStep}
 
 Rules for the interview:
 - Ask ONE focused question at a time (occasionally two if tightly related). Keep your turns short.

@@ -349,3 +349,8 @@ export async function acceptKnowledge(
 export function startLinkedInLogin(): void {
   window.location.href = "/api/auth/linkedin";
 }
+
+/** Sends the browser into the Google consent flow. */
+export function startGoogleLogin(): void {
+  window.location.href = "/api/auth/google";
+}

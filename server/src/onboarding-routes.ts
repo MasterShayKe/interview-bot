@@ -47,7 +47,9 @@ export function registerOnboardingRoutes(deps: Deps): void {
       const body = req.body as { messages?: ChatMessage[] };
       const messages = (body.messages ?? []).slice(-MAX_MESSAGES);
       const subjectName = bot.subjectName || req.authUser!.name;
-      const system = buildOnboardingSystemPrompt(subjectName);
+      const system = buildOnboardingSystemPrompt(subjectName, {
+        hasLinkedIn: Boolean(req.authUser!.linkedinSub),
+      });
 
       reply.raw.writeHead(200, {
         "Content-Type": "text/event-stream",

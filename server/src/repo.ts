@@ -17,6 +17,7 @@ function mapUser(r: any): User {
   return {
     id: r.id,
     linkedinSub: r.linkedin_sub,
+    googleSub: r.google_sub ?? null,
     email: r.email,
     name: r.name,
     avatarUrl: r.avatar_url,
@@ -77,6 +78,56 @@ export async function upsertUserByLinkedIn(profile: {
            name = EXCLUDED.name,
            avatar_url = EXCLUDED.avatar_url
      RETURNING *`,
+    [profile.sub, profile.email, profile.name, profile.avatarUrl],
+  );
+  return mapUser(row);
+}
+
+/**
+ * Upserts a user from a Google profile. Keys on google_sub; if that's new but a
+ * verified email already belongs to an existing account, links Google to it
+ * (so one person keeps one account/bot across providers) instead of creating a
+ * duplicate.
+ */
+export async function upsertUserByGoogle(profile: {
+  sub: string;
+  email: string | null;
+  name: string;
+  avatarUrl: string | null;
+  emailVerified: boolean;
+}): Promise<User> {
+  const bySub = await queryOne(
+    "SELECT * FROM users WHERE google_sub = $1",
+    [profile.sub],
+  );
+  if (bySub) {
+    const updated = await queryOne(
+      `UPDATE users SET email = $2, name = $3, avatar_url = $4
+       WHERE google_sub = $1 RETURNING *`,
+      [profile.sub, profile.email, profile.name, profile.avatarUrl],
+    );
+    return mapUser(updated);
+  }
+
+  if (profile.emailVerified && profile.email) {
+    const byEmail = await queryOne(
+      "SELECT * FROM users WHERE email = $1 AND google_sub IS NULL",
+      [profile.email],
+    );
+    if (byEmail) {
+      const linked = await queryOne(
+        `UPDATE users SET google_sub = $2, name = COALESCE(NULLIF(name,''), $3),
+           avatar_url = COALESCE(avatar_url, $4)
+         WHERE id = $1 RETURNING *`,
+        [(byEmail as { id: string }).id, profile.sub, profile.name, profile.avatarUrl],
+      );
+      return mapUser(linked);
+    }
+  }
+
+  const row = await queryOne(
+    `INSERT INTO users (google_sub, email, name, avatar_url)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
     [profile.sub, profile.email, profile.name, profile.avatarUrl],
   );
   return mapUser(row);
