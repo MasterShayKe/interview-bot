@@ -4,6 +4,7 @@
 export interface User {
   id: string;
   linkedinSub: string | null;
+  googleSub: string | null;
   email: string | null;
   name: string;
   avatarUrl: string | null;

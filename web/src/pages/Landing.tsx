@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchMe, startLinkedInLogin } from "../lib/api.js";
+import { fetchMe, startLinkedInLogin, startGoogleLogin } from "../lib/api.js";
 import { navigate } from "../lib/router.js";
 
 const ERRORS: Record<string, string> = {
@@ -8,17 +8,28 @@ const ERRORS: Record<string, string> = {
   auth: "Something went wrong signing in. Please try again.",
 };
 
-function LinkedInButton() {
+function SignInButtons() {
   return (
-    <button
-      onClick={startLinkedInLogin}
-      className="inline-flex items-center gap-3 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-ink transition-all hover:shadow-[0_0_28px_-6px] hover:shadow-accent"
-    >
-      <span className="flex h-5 w-5 items-center justify-center rounded bg-ink text-[0.7rem] font-bold text-accent">
-        in
-      </span>
-      Sign in with LinkedIn
-    </button>
+    <div className="flex flex-wrap items-center gap-3">
+      <button
+        onClick={startLinkedInLogin}
+        className="inline-flex items-center gap-3 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-ink transition-all hover:shadow-[0_0_28px_-6px] hover:shadow-accent"
+      >
+        <span className="flex h-5 w-5 items-center justify-center rounded bg-ink text-[0.7rem] font-bold text-accent">
+          in
+        </span>
+        Sign in with LinkedIn
+      </button>
+      <button
+        onClick={startGoogleLogin}
+        className="inline-flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-accent/40"
+      >
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[0.72rem] font-bold text-ink">
+          G
+        </span>
+        Sign in with Google
+      </button>
+    </div>
   );
 }
 
@@ -84,7 +95,7 @@ export default function Landing() {
                 Go to your dashboard →
               </button>
             ) : (
-              <LinkedInButton />
+              <SignInButtons />
             )}
             <button
               onClick={() => navigate("/u/shay")}
