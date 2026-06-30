@@ -12,6 +12,7 @@ import { seedShay } from "./seed.js";
 import { createGuard } from "./guard.js";
 import { registerAuthRoutes } from "./auth/routes.js";
 import { registerBotRoutes } from "./bot-routes.js";
+import { registerOnboardingRoutes } from "./onboarding-routes.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -59,6 +60,12 @@ registerBotRoutes({
   maxOutputTokens: MAX_OUTPUT_TOKENS,
   fitMaxOutputTokens: FIT_MAX_OUTPUT_TOKENS,
   maxJdChars: MAX_JD_CHARS,
+});
+registerOnboardingRoutes({
+  app,
+  client,
+  guard,
+  maxOutputTokens: MAX_OUTPUT_TOKENS,
 });
 
 // In production, serve the built web app from this same service (single origin).
