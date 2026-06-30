@@ -327,6 +327,12 @@ export default function Dashboard() {
             <h2 className="font-display text-xl text-white">Knowledge</h2>
             <div className="flex gap-2">
               <button
+                onClick={() => navigate("/onboarding")}
+                className="rounded-lg border border-accent/30 bg-accent/[0.08] px-3 py-1.5 text-[0.78rem] font-medium text-accent hover:bg-accent/[0.14]"
+              >
+                ✦ Guided chat
+              </button>
+              <button
                 onClick={() => onAdd("experience")}
                 className="rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[0.78rem] text-white/70 hover:border-accent/40 hover:text-white"
               >
@@ -347,8 +353,19 @@ export default function Dashboard() {
 
           <div className="mt-4 space-y-2.5">
             {knowledge.length === 0 && (
-              <div className="rounded-xl border border-dashed border-white/12 px-4 py-8 text-center text-sm text-white/40">
-                No knowledge yet. Add your experience and projects above.
+              <div className="rounded-xl border border-dashed border-accent/25 bg-accent/[0.03] px-4 py-8 text-center">
+                <p className="text-sm text-white/55">
+                  Your agent has no knowledge yet.
+                </p>
+                <button
+                  onClick={() => navigate("/onboarding")}
+                  className="mt-3 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-ink transition-all hover:shadow-[0_0_22px_-8px] hover:shadow-accent"
+                >
+                  ✦ Start the guided interview
+                </button>
+                <p className="mt-2 text-[0.74rem] text-white/35">
+                  or add experience and projects manually above
+                </p>
               </div>
             )}
             {knowledge.map((item, i) => (

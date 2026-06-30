@@ -8,27 +8,33 @@ import {
   upsertUserByGoogle,
   getBotByUser,
   createBotForUser,
+  listKnowledge,
 } from "../repo.js";
 import type { User } from "../model.js";
 
 const STATE_COOKIE = "ib_oauth_state";
 
-/** Ensures the user has a bot, starts a session, and returns the post-login path. */
+/**
+ * Ensures the user has a bot, starts a session, and returns the post-login path.
+ * Sends anyone whose agent has no knowledge yet to the guided onboarding chat
+ * (new accounts, or returning users who never finished setup); everyone else to
+ * the dashboard.
+ */
 async function finishLogin(
   reply: FastifyReply,
   user: User,
 ): Promise<string> {
   let bot = await getBotByUser(user.id);
-  const isNew = !bot;
   if (!bot) {
-    await createBotForUser(user.id, {
+    bot = await createBotForUser(user.id, {
       displayName: user.name ? `${user.name}'s AI Representative` : "AI Representative",
       subjectName: user.name,
       contactEmail: user.email ?? "",
     });
   }
   await startSession(reply, user.id);
-  return isNew ? "/onboarding" : "/dashboard";
+  const knowledge = await listKnowledge(bot.id);
+  return knowledge.length === 0 ? "/onboarding" : "/dashboard";
 }
 
 function setState(reply: FastifyReply, state: string): void {
