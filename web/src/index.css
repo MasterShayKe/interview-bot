@@ -5,7 +5,11 @@
 :root {
   --ink: #0a0b0d;
   --text: #ecebe4;
-  --accent: #c6f24e;
+  /* Accent as a space-separated RGB triplet so Tailwind can apply alpha
+     (text-accent/90 etc.) and per-bot theming can override it at runtime. */
+  --accent-rgb: 198 242 78;
+  --accent-dim-rgb: 155 191 62;
+  --accent: rgb(var(--accent-rgb));
 }
 
 * {

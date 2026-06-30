@@ -16,6 +16,7 @@ import SpecDialog from "./components/SpecDialog.js";
 import FitDialog from "./components/FitDialog.js";
 import { getSessionDuration } from "./lib/device.js";
 import { navigate, takePendingAsk } from "./lib/router.js";
+import { applyAccent, resetAccent } from "./lib/theme.js";
 
 interface SessionStats {
   messages: number;
@@ -31,13 +32,22 @@ function initials(name: string): string {
 
 function Header({ bot }: { bot: PublicBot }) {
   const ini = initials(bot.subjectName);
+  const image = bot.theme?.logoUrl || bot.theme?.avatarUrl;
   return (
     <header className="flex items-center justify-between py-6">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.03] font-display text-lg leading-none text-white">
-          {ini[0]}
-          <span className="text-accent">{ini[1] ?? ""}</span>
-        </div>
+        {image ? (
+          <img
+            src={image}
+            alt={bot.subjectName}
+            className="h-9 w-9 rounded-lg border border-white/[0.12] object-cover"
+          />
+        ) : (
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.03] font-display text-lg leading-none text-white">
+            {ini[0]}
+            <span className="text-accent">{ini[1] ?? ""}</span>
+          </div>
+        )}
         <div className="leading-tight">
           <div className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-white/80">
             {bot.subjectName}
@@ -148,10 +158,13 @@ export default function App({ handle }: { handle: string }) {
       .then((b) => {
         setBot(b);
         setSuggestions(b.suggestedQuestions);
+        applyAccent(b.theme);
       })
       .catch((err) => {
         if ((err as Error).message === "NOT_FOUND") setNotFound(true);
       });
+    // Restore the default accent when leaving this bot's page.
+    return () => resetAccent();
   }, [handle]);
 
   const sessionStats = useMemo<SessionStats | null>(() => {
