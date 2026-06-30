@@ -8,9 +8,11 @@ import {
   deleteKnowledge,
   reorderKnowledge,
   logout,
+  fetchUsage,
   type OwnerBot,
   type KnowledgeItem,
   type KnowledgeKind,
+  type UsageSummary,
 } from "../lib/api.js";
 import { navigate } from "../lib/router.js";
 import { applyAccent, resetAccent, fileToResizedDataUrl } from "../lib/theme.js";
@@ -179,6 +181,8 @@ function KnowledgeRow({
 export default function Dashboard() {
   const [bot, setBot] = useState<OwnerBot | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeItem[]>([]);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -190,12 +194,14 @@ export default function Dashboard() {
           navigate("/login");
           return null;
         }
+        setIsAdmin(Boolean(me.isAdmin));
         return fetchMyBot();
       })
       .then((res) => {
         if (!res) return;
         setBot(res.bot);
         setKnowledge(res.knowledge);
+        fetchUsage().then(setUsage).catch(() => {});
       })
       .catch(() => setError("Could not load your dashboard."))
       .finally(() => setLoaded(true));
@@ -264,6 +270,14 @@ export default function Dashboard() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <button
+                onClick={() => navigate("/admin")}
+                className="font-mono text-[0.64rem] uppercase tracking-[0.14em] text-accent/80 hover:text-accent"
+              >
+                Admin →
+              </button>
+            )}
             {bot.handle && published && (
               <button
                 onClick={() => navigate(`/u/${bot.handle}`)}
@@ -297,6 +311,12 @@ export default function Dashboard() {
 
         {/* Publish + handle */}
         <PublishCard bot={bot} onSave={saveProfile} />
+
+        {/* Share link */}
+        {published && bot.handle && <ShareCard handle={bot.handle} />}
+
+        {/* Usage analytics */}
+        {usage && <AnalyticsCard usage={usage} />}
 
         {/* Profile */}
         <ProfileForm bot={bot} onSave={saveProfile} />
@@ -350,6 +370,133 @@ export default function Dashboard() {
         <div className="h-16" />
       </div>
     </div>
+  );
+}
+
+// --- share card -----------------------------------------------------------
+
+function ShareCard({ handle }: { handle: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/u/${handle}`;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // clipboard may be blocked; fall through to the visual cue anyway
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  return (
+    <section className="mt-6 rounded-2xl border border-accent/20 bg-accent/[0.04] p-5">
+      <div className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-accent/80">
+        Your shareable link
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <code className="flex-1 truncate rounded-lg border border-white/10 bg-black/40 px-3 py-2 font-mono text-[0.82rem] text-white/80">
+          {url}
+        </code>
+        <button
+          onClick={copy}
+          className="rounded-lg bg-accent px-4 py-2 text-[0.8rem] font-medium text-ink transition-all hover:shadow-[0_0_22px_-8px] hover:shadow-accent"
+        >
+          {copied ? "Copied ✓" : "Copy link"}
+        </button>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-lg border border-white/12 bg-white/[0.03] px-4 py-2 text-[0.8rem] text-white/70 hover:border-accent/40 hover:text-white"
+        >
+          Open
+        </a>
+      </div>
+      <p className="mt-2 text-[0.78rem] text-white/35">
+        Put this on your CV, LinkedIn, or email signature.
+      </p>
+    </section>
+  );
+}
+
+// --- analytics card -------------------------------------------------------
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-black/20 p-3.5">
+      <div className="font-mono text-[0.58rem] uppercase tracking-wider text-white/40">
+        {label}
+      </div>
+      <div className="mt-1 font-display text-xl text-white">{value}</div>
+    </div>
+  );
+}
+
+function compact(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
+  return String(n);
+}
+
+function AnalyticsCard({ usage }: { usage: UsageSummary }) {
+  const pct = usage.cap > 0 ? Math.min(100, (usage.today / usage.cap) * 100) : 0;
+  const peak = Math.max(1, ...usage.perDay.map((d) => d.tokens));
+  return (
+    <section className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+      <h2 className="font-display text-xl text-white">Usage</h2>
+
+      {/* Today vs cap */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between text-[0.8rem]">
+          <span className="text-white/55">Today</span>
+          <span className="font-mono text-white/70">
+            {usage.today.toLocaleString()} / {usage.cap.toLocaleString()} tokens
+          </span>
+        </div>
+        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+          <div
+            className={
+              "h-full rounded-full " +
+              (pct >= 100 ? "bg-amber-400/80" : "bg-accent")
+            }
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="mt-1 text-[0.72rem] text-white/35">
+          {pct >= 100
+            ? "Daily limit reached - resets tomorrow."
+            : `${Math.round(usage.cap - usage.today).toLocaleString()} tokens left today`}
+        </div>
+      </div>
+
+      {/* Totals */}
+      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <Stat label="Chats today" value={String(usage.todayRequests)} />
+        <Stat label="Tokens 7d" value={compact(usage.last7)} />
+        <Stat label="Tokens 30d" value={compact(usage.last30)} />
+        <Stat label="Chats all-time" value={String(usage.allRequests)} />
+      </div>
+
+      {/* 14-day sparkline */}
+      {usage.perDay.length > 0 && (
+        <div className="mt-5">
+          <div className="font-mono text-[0.58rem] uppercase tracking-wider text-white/40">
+            Last 14 days
+          </div>
+          <div className="mt-2 flex h-16 items-end gap-1">
+            {usage.perDay.map((d) => (
+              <div
+                key={d.day}
+                title={`${d.day}: ${d.tokens.toLocaleString()} tokens · ${d.requests} chats`}
+                className="flex-1 rounded-t bg-accent/40 transition-colors hover:bg-accent/70"
+                style={{ height: `${Math.max(4, (d.tokens / peak) * 100)}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

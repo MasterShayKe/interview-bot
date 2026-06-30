@@ -11,11 +11,18 @@ prompt caching), Postgres for multi-tenant data, "Sign in with LinkedIn"
 
 - **Public bot:** `/u/<handle>` - the grounded chat + fit-report experience.
 - **Dashboard:** `/dashboard` - edit persona, add/edit/reorder/delete knowledge,
-  pick a handle, set an accent color, publish.
+  pick a handle, set an accent color + avatar/logo, see usage analytics, copy a
+  share link, publish.
+- **Admin:** `/admin` - platform-wide insights (users, chats, tokens, top
+  agents, signups). Restricted to `ADMIN_EMAILS`.
 - **Auth:** `/login` - LinkedIn OIDC (name/email/photo). Bot knowledge is built
   in the editor (LinkedIn's API does not expose work history).
 
 The flagship demo bot (Shay Kopilevich) is seeded at `/u/shay`.
+
+Each bot has a **persisted daily token cap** (`PER_BOT_DAILY_TOKEN_CAP`, default
+50k) so per-user cost is bounded; the public chat shows the live remainder, and
+the Claude system prompt is cached per bot to cut cost.
 
 ## Architecture
 

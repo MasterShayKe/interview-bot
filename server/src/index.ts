@@ -13,6 +13,7 @@ import { createGuard } from "./guard.js";
 import { registerAuthRoutes } from "./auth/routes.js";
 import { registerBotRoutes } from "./bot-routes.js";
 import { registerOnboardingRoutes } from "./onboarding-routes.js";
+import { registerAdminRoutes } from "./admin-routes.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -67,6 +68,7 @@ registerOnboardingRoutes({
   guard,
   maxOutputTokens: MAX_OUTPUT_TOKENS,
 });
+registerAdminRoutes(app);
 
 // In production, serve the built web app from this same service (single origin).
 const WEB_DIST = path.join(

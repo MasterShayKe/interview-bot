@@ -5,6 +5,13 @@ import { generateFollowUps } from "./suggest.js";
 import { buildVisitorContext, type ClientContext } from "./context.js";
 import { getPublishedBotPrompts } from "./bot-cache.js";
 import { defaultRules } from "./persona-defaults.js";
+import {
+  isOverDailyCap,
+  recordBotUsage,
+  usageToday,
+  usageSummary,
+  dailyCapTokens,
+} from "./usage.js";
 import { requireAuth } from "./auth/session.js";
 import {
   getBotByUser,
@@ -97,7 +104,14 @@ export function registerBotRoutes(deps: BotRouteDeps): void {
       return { error: "No published bot at this address." };
     }
     const items = await listKnowledge(prompts.bot.id);
-    return publicBotView(prompts.bot, items);
+    const cap = dailyCapTokens();
+    const used = await usageToday(prompts.bot.id);
+    return {
+      ...publicBotView(prompts.bot, items),
+      dailyCap: cap,
+      dailyUsed: used,
+      dailyRemaining: Math.max(0, cap - used),
+    };
   });
 
   app.post("/api/bots/:handle/chat", async (req, reply) => {
@@ -109,7 +123,7 @@ export function registerBotRoutes(deps: BotRouteDeps): void {
     }
     const bot = prompts.bot;
 
-    if (guard.isBudgetExceeded(bot.id)) {
+    if (guard.isBudgetExceeded() || (await isOverDailyCap(bot.id))) {
       reply.code(503);
       return { error: bot.budgetRestMessage };
     }
@@ -144,8 +158,10 @@ export function registerBotRoutes(deps: BotRouteDeps): void {
         onText: (delta) => send("delta", { text: delta }),
         visitorContext,
       });
-      guard.recordUsage(totalTokens(usage), bot.id);
-      send("done", { usage });
+      guard.recordUsage(totalTokens(usage));
+      await recordBotUsage(bot.id, usage);
+      const remaining = Math.max(0, dailyCapTokens() - (await usageToday(bot.id)));
+      send("done", { usage, dailyRemaining: remaining });
 
       try {
         const questions = await generateFollowUps(
@@ -169,7 +185,7 @@ export function registerBotRoutes(deps: BotRouteDeps): void {
     }
     const bot = prompts.bot;
 
-    if (guard.isBudgetExceeded(bot.id)) {
+    if (guard.isBudgetExceeded() || (await isOverDailyCap(bot.id))) {
       reply.code(503);
       return { error: bot.budgetRestMessage };
     }
@@ -209,8 +225,10 @@ export function registerBotRoutes(deps: BotRouteDeps): void {
         onText: (delta) => send("delta", { text: delta }),
         visitorContext,
       });
-      guard.recordUsage(totalTokens(usage), bot.id);
-      send("done", { usage });
+      guard.recordUsage(totalTokens(usage));
+      await recordBotUsage(bot.id, usage);
+      const remaining = Math.max(0, dailyCapTokens() - (await usageToday(bot.id)));
+      send("done", { usage, dailyRemaining: remaining });
     });
   });
 
@@ -225,6 +243,19 @@ export function registerBotRoutes(deps: BotRouteDeps): void {
     const items = await listKnowledge(bot.id);
     return { bot, knowledge: items };
   });
+
+  app.get(
+    "/api/bots/me/usage",
+    { preHandler: requireAuth },
+    async (req, reply) => {
+      const bot = await getBotByUser(req.authUser!.id);
+      if (!bot) {
+        reply.code(404);
+        return { error: "No bot for this account." };
+      }
+      return usageSummary(bot.id);
+    },
+  );
 
   app.patch("/api/bots/me", { preHandler: requireAuth }, async (req, reply) => {
     const bot = await getBotByUser(req.authUser!.id);

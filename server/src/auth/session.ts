@@ -75,6 +75,29 @@ export async function requireAuth(
   req.authUser = user;
 }
 
+/** Platform admins, by email, from the ADMIN_EMAILS env (comma-separated). */
+export function isAdmin(user: User | null | undefined): boolean {
+  if (!user?.email) return false;
+  const admins = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return admins.includes(user.email.toLowerCase());
+}
+
+/** preHandler that requires the caller to be a platform admin. */
+export async function requireAdmin(
+  req: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  const user = await currentUser(req);
+  if (!user || !isAdmin(user)) {
+    reply.code(403).send({ error: "Admins only." });
+    return;
+  }
+  req.authUser = user;
+}
+
 declare module "fastify" {
   interface FastifyRequest {
     authUser?: User;

@@ -7,6 +7,7 @@ import {
   type ProposedItem,
 } from "./onboarding.js";
 import { requireAuth } from "./auth/session.js";
+import { isOverDailyCap, recordBotUsage } from "./usage.js";
 import { getBotByUser, addKnowledge, listKnowledge } from "./repo.js";
 import type { Guard } from "./guard.js";
 import type { KnowledgeKind } from "./model.js";
@@ -34,7 +35,7 @@ export function registerOnboardingRoutes(deps: Deps): void {
         reply.code(404);
         return { error: "No bot for this account." };
       }
-      if (guard.isBudgetExceeded(bot.id)) {
+      if (guard.isBudgetExceeded() || (await isOverDailyCap(bot.id))) {
         reply.code(503);
         return { error: bot.budgetRestMessage };
       }
@@ -74,8 +75,8 @@ export function registerOnboardingRoutes(deps: Deps): void {
             usage.outputTokens +
             usage.cacheCreationTokens +
             usage.cacheReadTokens,
-          bot.id,
         );
+        await recordBotUsage(bot.id, usage);
         send("done", { usage });
       } catch (err) {
         app.log.error(err);
@@ -96,7 +97,7 @@ export function registerOnboardingRoutes(deps: Deps): void {
         reply.code(404);
         return { error: "No bot for this account." };
       }
-      if (guard.isBudgetExceeded(bot.id)) {
+      if (guard.isBudgetExceeded() || (await isOverDailyCap(bot.id))) {
         reply.code(503);
         return { error: bot.budgetRestMessage };
       }
@@ -106,11 +107,18 @@ export function registerOnboardingRoutes(deps: Deps): void {
         reply.code(400);
         return { error: "Have a short conversation first, then build." };
       }
-      const items = await extractKnowledge(
+      const { items, usage } = await extractKnowledge(
         client,
         bot.subjectName || req.authUser!.name,
         messages,
       );
+      guard.recordUsage(
+        usage.inputTokens +
+          usage.outputTokens +
+          usage.cacheCreationTokens +
+          usage.cacheReadTokens,
+      );
+      await recordBotUsage(bot.id, usage);
       return { items };
     },
   );

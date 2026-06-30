@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ChatMessage } from "./chat.js";
+import type { ChatMessage, TokenUsage } from "./chat.js";
 import type { KnowledgeKind } from "./model.js";
 
 const MODEL = "claude-sonnet-4-6";
@@ -84,7 +84,7 @@ export async function extractKnowledge(
   client: Anthropic,
   subjectName: string,
   messages: ChatMessage[],
-): Promise<ProposedItem[]> {
+): Promise<{ items: ProposedItem[]; usage: TokenUsage }> {
   const res = await client.messages.create({
     model: MODEL,
     max_tokens: 2000,
@@ -94,15 +94,23 @@ export async function extractKnowledge(
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
   });
 
+  const usage: TokenUsage = {
+    inputTokens: res.usage.input_tokens ?? 0,
+    outputTokens: res.usage.output_tokens ?? 0,
+    cacheCreationTokens: res.usage.cache_creation_input_tokens ?? 0,
+    cacheReadTokens: res.usage.cache_read_input_tokens ?? 0,
+  };
+
   const block = res.content.find((c) => c.type === "tool_use");
-  if (!block || block.type !== "tool_use") return [];
+  if (!block || block.type !== "tool_use") return { items: [], usage };
   const input = block.input as { items?: ProposedItem[] };
-  const items = Array.isArray(input.items) ? input.items : [];
-  return items
+  const raw = Array.isArray(input.items) ? input.items : [];
+  const items = raw
     .filter((it) => it && it.title && it.body)
     .map((it) => ({
       kind: (KINDS as string[]).includes(it.kind) ? it.kind : "custom",
       title: String(it.title).trim(),
       body: String(it.body).trim(),
     }));
+  return { items, usage };
 }
