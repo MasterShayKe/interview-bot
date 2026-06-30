@@ -15,8 +15,8 @@ export default {
           600: "#1D2026",
         },
         accent: {
-          DEFAULT: "#C6F24E",
-          dim: "#9BBF3E",
+          DEFAULT: "rgb(var(--accent-rgb) / <alpha-value>)",
+          dim: "rgb(var(--accent-dim-rgb) / <alpha-value>)",
         },
       },
       keyframes: {

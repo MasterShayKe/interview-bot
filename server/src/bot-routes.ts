@@ -234,6 +234,14 @@ export function registerBotRoutes(deps: BotRouteDeps): void {
     }
     const body = (req.body ?? {}) as Record<string, unknown>;
 
+    // Theme can carry inline avatar/logo data URLs; keep the row bounded.
+    if (body.theme !== undefined) {
+      if (JSON.stringify(body.theme).length > 1_500_000) {
+        reply.code(413);
+        return { error: "Theme is too large. Use a smaller image." };
+      }
+    }
+
     if (typeof body.handle === "string") {
       const handle = body.handle.toLowerCase().trim();
       const err = validateHandle(handle);

@@ -13,6 +13,7 @@ import {
   type KnowledgeKind,
 } from "../lib/api.js";
 import { navigate } from "../lib/router.js";
+import { applyAccent, resetAccent, fileToResizedDataUrl } from "../lib/theme.js";
 
 const KINDS: KnowledgeKind[] = [
   "experience",
@@ -436,9 +437,31 @@ function ProfileForm({
     suggested: bot.suggestedQuestions.join("\n"),
     accent: bot.theme.accent ?? "#C6F24E",
   });
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(bot.theme.avatarUrl);
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(bot.theme.logoUrl);
+  const [imgError, setImgError] = useState<string | null>(null);
 
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }));
+  }
+
+  // Live-preview the accent across the editor; restore default on unmount.
+  useEffect(() => {
+    applyAccent({ accent: form.accent });
+  }, [form.accent]);
+  useEffect(() => () => resetAccent(), []);
+
+  async function pickImage(
+    file: File | undefined,
+    setter: (v: string | undefined) => void,
+  ) {
+    if (!file) return;
+    setImgError(null);
+    try {
+      setter(await fileToResizedDataUrl(file, 256));
+    } catch (e) {
+      setImgError((e as Error).message);
+    }
   }
 
   function save() {
@@ -458,7 +481,7 @@ function ProfileForm({
         .split("\n")
         .map((s) => s.trim())
         .filter(Boolean),
-      theme: { ...bot.theme, accent: form.accent },
+      theme: { ...bot.theme, accent: form.accent, avatarUrl, logoUrl },
     });
   }
 
@@ -560,6 +583,28 @@ function ProfileForm({
         </Field>
       </div>
 
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <ImagePicker
+          label="Avatar / profile picture"
+          hint="Square works best. Shown in your agent's header."
+          value={avatarUrl}
+          rounded="rounded-full"
+          onPick={(f) => pickImage(f, setAvatarUrl)}
+          onClear={() => setAvatarUrl(undefined)}
+        />
+        <ImagePicker
+          label="Logo (optional)"
+          hint="Overrides the avatar in the header if set."
+          value={logoUrl}
+          rounded="rounded-lg"
+          onPick={(f) => pickImage(f, setLogoUrl)}
+          onClear={() => setLogoUrl(undefined)}
+        />
+      </div>
+      {imgError && (
+        <p className="mt-2 text-[0.78rem] text-red-300/70">{imgError}</p>
+      )}
+
       <div className="mt-5 flex justify-end">
         <button
           onClick={save}
@@ -569,5 +614,60 @@ function ProfileForm({
         </button>
       </div>
     </section>
+  );
+}
+
+function ImagePicker({
+  label,
+  hint,
+  value,
+  rounded,
+  onPick,
+  onClear,
+}: {
+  label: string;
+  hint: string;
+  value: string | undefined;
+  rounded: string;
+  onPick: (file: File | undefined) => void;
+  onClear: () => void;
+}) {
+  return (
+    <Field label={label} hint={hint}>
+      <div className="flex items-center gap-3">
+        <div
+          className={
+            "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden border border-white/10 bg-black/30 " +
+            rounded
+          }
+        >
+          {value ? (
+            <img src={value} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="font-mono text-[0.6rem] text-white/30">none</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="cursor-pointer rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[0.78rem] text-white/70 transition-colors hover:border-accent/40 hover:text-white">
+            {value ? "Replace" : "Upload"}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => onPick(e.target.files?.[0])}
+            />
+          </label>
+          {value && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-left text-[0.74rem] text-white/35 hover:text-red-300"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
+    </Field>
   );
 }
