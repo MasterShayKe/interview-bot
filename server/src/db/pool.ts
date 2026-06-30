@@ -6,6 +6,23 @@ import pg from "pg";
  */
 let pool: pg.Pool | null = null;
 
+/**
+ * Whether to connect with SSL. Managed Postgres (Render, etc.) requires it;
+ * local dev does not. We enable it for any non-local host - so it works whether
+ * or not the URL carries `?sslmode=require` - and let DATABASE_SSL override.
+ */
+function shouldUseSsl(connectionString: string): boolean {
+  if (process.env.DATABASE_SSL === "true") return true;
+  if (process.env.DATABASE_SSL === "false") return false;
+  if (/sslmode=require/.test(connectionString)) return true;
+  try {
+    const host = new URL(connectionString).hostname;
+    return host !== "" && host !== "localhost" && host !== "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
 export function getPool(): pg.Pool {
   if (!pool) {
     const connectionString = process.env.DATABASE_URL;
@@ -14,8 +31,7 @@ export function getPool(): pg.Pool {
     }
     pool = new pg.Pool({
       connectionString,
-      // Render's managed Postgres requires SSL; local dev does not.
-      ssl: /sslmode=require/.test(connectionString)
+      ssl: shouldUseSsl(connectionString)
         ? { rejectUnauthorized: false }
         : undefined,
     });
