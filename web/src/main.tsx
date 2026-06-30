@@ -4,6 +4,7 @@ import App from "./App.js";
 import Landing from "./pages/Landing.js";
 import Dashboard from "./pages/Dashboard.js";
 import Onboarding from "./pages/Onboarding.js";
+import Admin from "./pages/Admin.js";
 import { useRoute } from "./lib/router.js";
 import "./index.css";
 
@@ -39,6 +40,7 @@ function Root() {
   if (botMatch) return <App handle={botMatch[1]} />;
 
   if (path === "/dashboard") return <Dashboard />;
+  if (path === "/admin") return <Admin />;
   if (path === "/onboarding") return <Onboarding />;
   if (path === "/login") return <Landing />;
   return <Landing />;

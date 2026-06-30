@@ -6,7 +6,7 @@ import {
   fetchProfile,
   isConfigured,
 } from "./linkedin.js";
-import { startSession, endSession, currentUser } from "./session.js";
+import { startSession, endSession, currentUser, isAdmin } from "./session.js";
 import { upsertUserByLinkedIn, getBotByUser, createBotForUser } from "../repo.js";
 
 const STATE_COOKIE = "ib_oauth_state";
@@ -78,6 +78,6 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       return { error: "Not authenticated." };
     }
     const bot = await getBotByUser(user.id);
-    return { user, bot };
+    return { user, bot, isAdmin: isAdmin(user) };
   });
 }

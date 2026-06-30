@@ -21,6 +21,10 @@ services:
         generateValue: true
       - key: SEED_DEMO
         value: "true"
+      - key: PER_BOT_DAILY_TOKEN_CAP
+        value: "50000"
+      - key: ADMIN_EMAILS
+        sync: false
       - key: LINKEDIN_CLIENT_ID
         sync: false
       - key: LINKEDIN_CLIENT_SECRET

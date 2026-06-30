@@ -74,10 +74,14 @@ function Footer({
   onOpenSpec,
   onOpenPortal,
   stats,
+  remaining,
+  cap,
 }: {
   onOpenSpec: () => void;
   onOpenPortal: () => void;
   stats: SessionStats | null;
+  remaining: number | null;
+  cap: number;
 }) {
   return (
     <footer className="flex items-center justify-between border-t border-white/[0.06] py-5">
@@ -105,6 +109,19 @@ function Footer({
         {stats && (
           <span className="font-mono text-[0.58rem] uppercase tracking-[0.1em] text-white/20">
             {stats.messages} msg · {stats.total.toLocaleString()} tokens · {stats.cacheRate}% cached
+          </span>
+        )}
+        {remaining !== null && (
+          <span
+            className={
+              "font-mono text-[0.58rem] uppercase tracking-[0.1em] " +
+              (remaining <= 0 ? "text-amber-400/60" : "text-white/25")
+            }
+            title="Daily token allowance remaining for this agent"
+          >
+            {remaining <= 0
+              ? "daily limit reached"
+              : `${remaining.toLocaleString()} / ${cap.toLocaleString()} tokens left today`}
           </span>
         )}
         <span className="font-mono text-[0.6rem] uppercase tracking-[0.15em] text-white/25">
@@ -143,6 +160,7 @@ const initialClientContext = collectClientContext();
 
 export default function App({ handle }: { handle: string }) {
   const [bot, setBot] = useState<PublicBot | null>(null);
+  const [remaining, setRemaining] = useState<number | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -158,6 +176,7 @@ export default function App({ handle }: { handle: string }) {
       .then((b) => {
         setBot(b);
         setSuggestions(b.suggestedQuestions);
+        setRemaining(b.dailyRemaining);
         applyAccent(b.theme);
       })
       .catch((err) => {
@@ -214,8 +233,9 @@ export default function App({ handle }: { handle: string }) {
             return copy;
           });
         },
-        onDone: (usage) => {
+        onDone: (usage, dr) => {
           setTokenUsage((prev) => ({ ...prev, [assistantIdx]: usage }));
+          if (typeof dr === "number") setRemaining(dr);
         },
         onSuggestions: (questions) => {
           setDynamicSuggestions(questions);
@@ -266,8 +286,9 @@ export default function App({ handle }: { handle: string }) {
             return copy;
           });
         },
-        onDone: (usage) => {
+        onDone: (usage, dr) => {
           setTokenUsage((prev) => ({ ...prev, [assistantIdx]: usage }));
+          if (typeof dr === "number") setRemaining(dr);
         },
       });
     } catch (err) {
@@ -359,6 +380,8 @@ export default function App({ handle }: { handle: string }) {
             onOpenSpec={() => setShowSpec(true)}
             onOpenPortal={() => navigate(`/u/${handle}/portal`)}
             stats={sessionStats}
+            remaining={remaining}
+            cap={bot.dailyCap}
           />
         )}
       </div>

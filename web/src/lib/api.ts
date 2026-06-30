@@ -45,6 +45,9 @@ export interface PublicBot {
   theme: BotTheme;
   rules: string[];
   facts: PublicFact[];
+  dailyCap: number;
+  dailyUsed: number;
+  dailyRemaining: number;
 }
 
 export async function fetchBot(handle: string): Promise<PublicBot> {
@@ -60,7 +63,7 @@ async function consumeSse(
   res: Response,
   handlers: {
     onDelta: (text: string) => void;
-    onDone?: (usage: TokenUsage) => void;
+    onDone?: (usage: TokenUsage, dailyRemaining?: number) => void;
     onSuggestions?: (questions: string[]) => void;
   },
 ): Promise<void> {
@@ -89,7 +92,7 @@ async function consumeSse(
       if (!dataLine) continue;
       const data = JSON.parse(dataLine);
       if (type === "delta") handlers.onDelta(data.text);
-      else if (type === "done") handlers.onDone?.(data.usage);
+      else if (type === "done") handlers.onDone?.(data.usage, data.dailyRemaining);
       else if (type === "suggestions") handlers.onSuggestions?.(data.questions);
       else if (type === "error") throw new Error(data.message);
     }
@@ -100,7 +103,7 @@ export interface StreamChatOptions {
   handle: string;
   messages: ChatMessage[];
   onDelta: (text: string) => void;
-  onDone?: (usage: TokenUsage) => void;
+  onDone?: (usage: TokenUsage, dailyRemaining?: number) => void;
   onSuggestions?: (questions: string[]) => void;
   clientContext?: import("./device.js").ClientContext;
   sessionDurationSeconds?: number;
@@ -124,7 +127,7 @@ export interface StreamFitOptions {
   handle: string;
   jobDescription: string;
   onDelta: (text: string) => void;
-  onDone?: (usage: TokenUsage) => void;
+  onDone?: (usage: TokenUsage, dailyRemaining?: number) => void;
   clientContext?: import("./device.js").ClientContext;
   sessionDurationSeconds?: number;
 }
@@ -173,6 +176,7 @@ export interface KnowledgeItem {
 export interface MeResponse {
   user: { id: string; name: string; email: string | null; avatarUrl: string | null };
   bot: OwnerBot | null;
+  isAdmin?: boolean;
 }
 
 /** Returns the signed-in user, or null when logged out. */
@@ -239,6 +243,56 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST" });
 }
 
+export interface UsageSummary {
+  cap: number;
+  today: number;
+  todayRequests: number;
+  last7: number;
+  last30: number;
+  allTime: number;
+  allRequests: number;
+  perDay: { day: string; tokens: number; requests: number }[];
+}
+
+export async function fetchUsage(): Promise<UsageSummary> {
+  const res = await fetch("/api/bots/me/usage");
+  if (!res.ok) throw new Error("Failed to load usage");
+  return res.json();
+}
+
+// --- admin ----------------------------------------------------------------
+
+export interface AdminOverview {
+  users: number;
+  newUsers7: number;
+  bots: number;
+  botsPublished: number;
+  knowledgeItems: number;
+  tokensToday: number;
+  tokens7: number;
+  tokens30: number;
+  tokensAll: number;
+  chatsToday: number;
+  chatsAll: number;
+  perDay: { day: string; tokens: number; requests: number }[];
+  topBots: {
+    handle: string | null;
+    subjectName: string;
+    status: string;
+    tokens: number;
+    requests: number;
+  }[];
+  recentUsers: { name: string; email: string | null; createdAt: string }[];
+}
+
+/** Loads the platform admin overview; throws "FORBIDDEN" for non-admins. */
+export async function fetchAdminOverview(): Promise<AdminOverview> {
+  const res = await fetch("/api/admin/overview");
+  if (res.status === 403 || res.status === 401) throw new Error("FORBIDDEN");
+  if (!res.ok) throw new Error("Failed to load admin overview");
+  return res.json();
+}
+
 // --- onboarding chat ------------------------------------------------------
 
 export interface ProposedItem {
@@ -250,7 +304,7 @@ export interface ProposedItem {
 export interface OnboardingChatOptions {
   messages: ChatMessage[];
   onDelta: (text: string) => void;
-  onDone?: (usage: TokenUsage) => void;
+  onDone?: (usage: TokenUsage, dailyRemaining?: number) => void;
 }
 
 /** Streams the next interviewer turn for the signed-in user. */
