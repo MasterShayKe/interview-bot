@@ -8,6 +8,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import { runMigrations } from "./db/migrate.js";
+import { seedShay } from "./seed.js";
 import { createGuard } from "./guard.js";
 import { registerAuthRoutes } from "./auth/routes.js";
 import { registerBotRoutes } from "./bot-routes.js";
@@ -26,6 +27,17 @@ const MAX_JD_CHARS = Number(process.env.MAX_JD_CHARS ?? 8000);
 
 // Apply any pending DB migrations before serving traffic.
 await runMigrations();
+
+// Optionally seed the flagship /u/shay demo bot. Seeds only when missing, so a
+// redeploy never overwrites dashboard edits. Non-fatal if it fails.
+if (process.env.SEED_DEMO === "true") {
+  try {
+    const bot = await seedShay({ force: false });
+    if (bot) console.log(`[seed] demo bot ready at /u/${bot.handle}`);
+  } catch (err) {
+    console.error("[seed] demo seed failed (continuing):", err);
+  }
+}
 
 const app = Fastify({ logger: true });
 

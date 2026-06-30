@@ -19,6 +19,8 @@ services:
           property: connectionString
       - key: COOKIE_SECRET
         generateValue: true
+      - key: SEED_DEMO
+        value: "true"
       - key: LINKEDIN_CLIENT_ID
         sync: false
       - key: LINKEDIN_CLIENT_SECRET
