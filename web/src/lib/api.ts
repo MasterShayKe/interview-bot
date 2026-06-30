@@ -239,6 +239,58 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST" });
 }
 
+// --- onboarding chat ------------------------------------------------------
+
+export interface ProposedItem {
+  kind: KnowledgeKind;
+  title: string;
+  body: string;
+}
+
+export interface OnboardingChatOptions {
+  messages: ChatMessage[];
+  onDelta: (text: string) => void;
+  onDone?: (usage: TokenUsage) => void;
+}
+
+/** Streams the next interviewer turn for the signed-in user. */
+export async function onboardingChat(opts: OnboardingChatOptions): Promise<void> {
+  const res = await fetch("/api/onboarding/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: opts.messages }),
+  });
+  await consumeSse(res, opts);
+}
+
+/** Turns the interview transcript into proposed knowledge items. */
+export async function extractKnowledge(
+  messages: ChatMessage[],
+): Promise<ProposedItem[]> {
+  const res = await fetch("/api/onboarding/extract", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error ?? "Could not build your knowledge.");
+  return json.items ?? [];
+}
+
+/** Accepts proposed items into the user's bot; returns the full knowledge list. */
+export async function acceptKnowledge(
+  items: ProposedItem[],
+): Promise<KnowledgeItem[]> {
+  const res = await fetch("/api/onboarding/accept", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error ?? "Could not save your knowledge.");
+  return json.knowledge ?? [];
+}
+
 /** Sends the browser into the LinkedIn consent flow. */
 export function startLinkedInLogin(): void {
   window.location.href = "/api/auth/linkedin";
