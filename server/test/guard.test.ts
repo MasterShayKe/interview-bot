@@ -43,4 +43,20 @@ describe("createGuard", () => {
     guard.recordUsage(300);
     expect(guard.isBudgetExceeded()).toBe(true);
   });
+
+  it("tracks token budget per bot key independently", () => {
+    const now = 1000;
+    const guard = createGuard({
+      windowMs: 60000,
+      maxRequests: 100,
+      dailyTokenBudget: 500,
+      clock: () => now,
+    });
+    guard.recordUsage(600, "bot-a");
+    expect(guard.isBudgetExceeded("bot-a")).toBe(true);
+    // A different bot is unaffected by bot-a resting.
+    expect(guard.isBudgetExceeded("bot-b")).toBe(false);
+    guard.recordUsage(600, "bot-b");
+    expect(guard.isBudgetExceeded("bot-b")).toBe(true);
+  });
 });

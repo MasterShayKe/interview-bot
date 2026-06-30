@@ -4,7 +4,8 @@ import { projects, clusterLabel } from "./projects.js";
 import type { SurfaceFact } from "./surface.js";
 import { navigate } from "../lib/router.js";
 
-export default function Portal() {
+export default function Portal({ handle }: { handle: string }) {
+  const chatPath = `/u/${handle}`;
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const labelLayerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<PortalScene | null>(null);
@@ -80,7 +81,7 @@ export default function Portal() {
           )}
         </div>
         <button
-          onClick={() => (project ? setSelected(null) : navigate("/"))}
+          onClick={() => (project ? setSelected(null) : navigate(chatPath))}
           className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-white/60 backdrop-blur transition-colors hover:border-accent/40 hover:text-accent"
         >
           <span className="text-accent/60">←</span>
@@ -134,7 +135,7 @@ export default function Portal() {
       {/* Ask-the-agent hand-off, always available on the surface */}
       {project && (
         <button
-          onClick={() => navigate("/", { ask: `Tell me more about ${project.title}.` })}
+          onClick={() => navigate(chatPath, { ask: `Tell me more about ${project.title}.` })}
           className="group absolute bottom-12 right-4 z-30 hidden items-center gap-1.5 rounded-full border border-accent/25 bg-accent/[0.06] px-4 py-2 text-[0.78rem] font-medium text-white transition-all hover:border-accent/50 hover:bg-accent/[0.1] sm:bottom-16 sm:flex"
         >
           Ask the agent

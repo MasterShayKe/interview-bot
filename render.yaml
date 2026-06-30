@@ -1,4 +1,9 @@
 # Single Node service: the API also serves the built web app (one origin, one URL).
+# Migrations run automatically on start (see server/src/index.ts).
+databases:
+  - name: interview-bot-db
+    plan: free
+
 services:
   - type: web
     name: shaykopi-interview-bot
@@ -7,4 +12,18 @@ services:
     startCommand: npm start
     envVars:
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: interview-bot-db
+          property: connectionString
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: LINKEDIN_CLIENT_ID
+        sync: false
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: LINKEDIN_REDIRECT_URI
+        sync: false
+      - key: WEB_ORIGIN
         sync: false
