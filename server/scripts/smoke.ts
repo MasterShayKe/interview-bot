@@ -1,24 +1,26 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { loadSpec } from "../src/spec.js";
+import { getBotByHandle, listKnowledge } from "../src/repo.js";
 import { buildSystemPrompt } from "../src/prompt.js";
 import { streamChat } from "../src/chat.js";
+import { getPool } from "../src/db/pool.js";
 
-const specDir = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../spec",
-);
-const system = buildSystemPrompt(loadSpec(specDir));
+const handle = process.argv[2] ?? "shay";
+const bot = await getBotByHandle(handle);
+if (!bot) {
+  console.error(`No bot @${handle}. Run "npm run seed-shay" first.`);
+  process.exit(1);
+}
+const items = await listKnowledge(bot.id);
+const system = buildSystemPrompt(bot, items);
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const questions = [
-  "What did Shay build at NiCE?",
+  `What did ${bot.subjectName} build at NiCE?`,
   "Explain the 8-agent marketing system.",
-  "What is Shay's tech stack?",
-  "What are Shay's salary expectations?", // should decline
-  "Did Shay work at Google?", // should say it has no such info
+  `What is ${bot.subjectName}'s tech stack?`,
+  `What are ${bot.subjectName}'s salary expectations?`, // should decline
+  `Did ${bot.subjectName} work at Google?`, // should say it has no such info
 ];
 
 for (const q of questions) {
@@ -32,3 +34,4 @@ for (const q of questions) {
   });
 }
 process.stdout.write("\n");
+await getPool().end();

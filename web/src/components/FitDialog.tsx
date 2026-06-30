@@ -4,11 +4,12 @@ const MIN_CHARS = 40;
 const MAX_CHARS = 8000;
 
 interface Props {
+  subjectName: string;
   onClose: () => void;
   onAnalyze: (jobDescription: string) => void;
 }
 
-export default function FitDialog({ onClose, onAnalyze }: Props) {
+export default function FitDialog({ subjectName, onClose, onAnalyze }: Props) {
   const [jd, setJd] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -62,9 +63,9 @@ export default function FitDialog({ onClose, onAnalyze }: Props) {
         <div className="flex flex-col gap-4 overflow-auto px-6 py-5">
           <p className="text-sm leading-relaxed text-white/50">
             Drop in the role you are hiring for. The agent returns an honest,
-            grounded read on Shay's fit - where he matches, where he stretches,
-            and the real gaps. It only credits what is evidenced in his
-            background.
+            grounded read on {subjectName}'s fit - where they match, where they
+            stretch, and the real gaps. It only credits what is evidenced in
+            their background.
           </p>
 
           <textarea

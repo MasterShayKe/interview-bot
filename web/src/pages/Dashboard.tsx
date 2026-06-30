@@ -1,0 +1,573 @@
+import { useEffect, useState } from "react";
+import {
+  fetchMe,
+  fetchMyBot,
+  updateMyBot,
+  addKnowledge,
+  updateKnowledge,
+  deleteKnowledge,
+  reorderKnowledge,
+  logout,
+  type OwnerBot,
+  type KnowledgeItem,
+  type KnowledgeKind,
+} from "../lib/api.js";
+import { navigate } from "../lib/router.js";
+
+const KINDS: KnowledgeKind[] = [
+  "experience",
+  "project",
+  "cv",
+  "personal",
+  "custom",
+];
+
+function Field({
+  label,
+  children,
+  hint,
+}: {
+  label: string;
+  children: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block font-mono text-[0.62rem] uppercase tracking-[0.16em] text-white/45">
+        {label}
+      </span>
+      {children}
+      {hint && <span className="mt-1 block text-[0.72rem] text-white/30">{hint}</span>}
+    </label>
+  );
+}
+
+const inputCls =
+  "w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/85 placeholder:text-white/25 focus:border-accent/40 focus:outline-none";
+
+// --- knowledge editor row -------------------------------------------------
+
+function KnowledgeRow({
+  item,
+  first,
+  last,
+  onSaved,
+  onDeleted,
+  onMove,
+}: {
+  item: KnowledgeItem;
+  first: boolean;
+  last: boolean;
+  onSaved: (it: KnowledgeItem) => void;
+  onDeleted: (id: string) => void;
+  onMove: (id: string, dir: -1 | 1) => void;
+}) {
+  const [kind, setKind] = useState<KnowledgeKind>(item.kind);
+  const [title, setTitle] = useState(item.title);
+  const [body, setBody] = useState(item.body);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const dirty = kind !== item.kind || title !== item.title || body !== item.body;
+
+  async function save() {
+    setSaving(true);
+    try {
+      const { item: updated } = await updateKnowledge(item.id, { kind, title, body });
+      onSaved(updated);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02]">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <span className="rounded-md border border-accent/25 bg-accent/[0.06] px-2 py-0.5 font-mono text-[0.58rem] uppercase tracking-wider text-accent/80">
+          {item.kind}
+        </span>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex-1 truncate text-left text-sm text-white/80 hover:text-white"
+        >
+          {item.title || <span className="text-white/30">Untitled</span>}
+        </button>
+        <div className="flex items-center gap-1">
+          <button
+            disabled={first}
+            onClick={() => onMove(item.id, -1)}
+            className="px-1.5 text-white/40 enabled:hover:text-accent disabled:opacity-20"
+            aria-label="Move up"
+          >
+            ↑
+          </button>
+          <button
+            disabled={last}
+            onClick={() => onMove(item.id, 1)}
+            className="px-1.5 text-white/40 enabled:hover:text-accent disabled:opacity-20"
+            aria-label="Move down"
+          >
+            ↓
+          </button>
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="px-2 font-mono text-[0.6rem] uppercase tracking-wider text-white/40 hover:text-accent"
+          >
+            {open ? "close" : "edit"}
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <div className="space-y-3 border-t border-white/[0.07] px-4 py-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Type">
+              <select
+                value={kind}
+                onChange={(e) => setKind(e.target.value as KnowledgeKind)}
+                className={inputCls}
+              >
+                {KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Title">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={inputCls}
+                placeholder="e.g. Senior Engineer at Acme"
+              />
+            </Field>
+          </div>
+          <Field label="Details (Markdown)">
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={7}
+              dir="auto"
+              className={inputCls + " resize-y font-mono text-[0.8rem] leading-relaxed"}
+              placeholder="What you did, the impact, and the stack."
+            />
+          </Field>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => onDeleted(item.id)}
+              className="text-[0.78rem] text-red-300/60 hover:text-red-300"
+            >
+              Delete
+            </button>
+            <button
+              onClick={save}
+              disabled={!dirty || saving}
+              className="rounded-lg bg-accent px-4 py-2 text-[0.8rem] font-medium text-ink transition-all disabled:bg-white/10 disabled:text-white/30"
+            >
+              {saving ? "Saving…" : "Save item"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- main page ------------------------------------------------------------
+
+export default function Dashboard() {
+  const [bot, setBot] = useState<OwnerBot | null>(null);
+  const [knowledge, setKnowledge] = useState<KnowledgeItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMe()
+      .then((me) => {
+        if (!me) {
+          navigate("/login");
+          return null;
+        }
+        return fetchMyBot();
+      })
+      .then((res) => {
+        if (!res) return;
+        setBot(res.bot);
+        setKnowledge(res.knowledge);
+      })
+      .catch(() => setError("Could not load your dashboard."))
+      .finally(() => setLoaded(true));
+  }, []);
+
+  function flash(msg: string) {
+    setNotice(msg);
+    setError(null);
+    window.setTimeout(() => setNotice(null), 2500);
+  }
+
+  async function saveProfile(patch: Partial<OwnerBot>) {
+    setError(null);
+    try {
+      const { bot: updated } = await updateMyBot(patch);
+      setBot(updated);
+      flash("Saved.");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function onAdd(kind: KnowledgeKind) {
+    const { item } = await addKnowledge({ kind, title: "", body: "" });
+    setKnowledge((k) => [...k, item]);
+  }
+
+  async function onDelete(id: string) {
+    await deleteKnowledge(id);
+    setKnowledge((k) => k.filter((it) => it.id !== id));
+  }
+
+  async function onMove(id: string, dir: -1 | 1) {
+    const idx = knowledge.findIndex((k) => k.id === id);
+    const swap = idx + dir;
+    if (idx < 0 || swap < 0 || swap >= knowledge.length) return;
+    const next = [...knowledge];
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    setKnowledge(next);
+    const { knowledge: saved } = await reorderKnowledge(next.map((k) => k.id));
+    setKnowledge(saved);
+  }
+
+  if (!loaded) return null;
+  if (!bot) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-white/50">
+        {error ?? "No bot found."}
+      </div>
+    );
+  }
+
+  const published = bot.status === "published";
+
+  return (
+    <div className="relative min-h-screen">
+      <div className="bg-atmosphere" aria-hidden />
+      <div className="relative z-10 mx-auto w-full max-w-3xl px-5 py-8 sm:px-8">
+        <header className="flex items-center justify-between border-b border-white/[0.06] pb-5">
+          <div>
+            <div className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-accent/80">
+              Dashboard
+            </div>
+            <h1 className="mt-1 font-display text-2xl text-white">
+              {bot.displayName || "Your interview agent"}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {bot.handle && published && (
+              <button
+                onClick={() => navigate(`/u/${bot.handle}`)}
+                className="font-mono text-[0.64rem] uppercase tracking-[0.14em] text-accent/80 hover:text-accent"
+              >
+                View live →
+              </button>
+            )}
+            <button
+              onClick={async () => {
+                await logout();
+                navigate("/");
+              }}
+              className="font-mono text-[0.64rem] uppercase tracking-[0.14em] text-white/40 hover:text-white"
+            >
+              Log out
+            </button>
+          </div>
+        </header>
+
+        {notice && (
+          <div className="mt-4 rounded-lg border border-accent/25 bg-accent/[0.06] px-4 py-2 text-sm text-accent/90">
+            {notice}
+          </div>
+        )}
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-400/30 bg-red-400/[0.06] px-4 py-2 text-sm text-red-200/80">
+            {error}
+          </div>
+        )}
+
+        {/* Publish + handle */}
+        <PublishCard bot={bot} onSave={saveProfile} />
+
+        {/* Profile */}
+        <ProfileForm bot={bot} onSave={saveProfile} />
+
+        {/* Knowledge */}
+        <section className="mt-10">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl text-white">Knowledge</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onAdd("experience")}
+                className="rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[0.78rem] text-white/70 hover:border-accent/40 hover:text-white"
+              >
+                + Experience
+              </button>
+              <button
+                onClick={() => onAdd("project")}
+                className="rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[0.78rem] text-white/70 hover:border-accent/40 hover:text-white"
+              >
+                + Project
+              </button>
+            </div>
+          </div>
+          <p className="mt-1 text-[0.8rem] text-white/40">
+            These are the only facts your agent can state. Reorder to control
+            priority.
+          </p>
+
+          <div className="mt-4 space-y-2.5">
+            {knowledge.length === 0 && (
+              <div className="rounded-xl border border-dashed border-white/12 px-4 py-8 text-center text-sm text-white/40">
+                No knowledge yet. Add your experience and projects above.
+              </div>
+            )}
+            {knowledge.map((item, i) => (
+              <KnowledgeRow
+                key={item.id}
+                item={item}
+                first={i === 0}
+                last={i === knowledge.length - 1}
+                onSaved={(u) =>
+                  setKnowledge((k) => k.map((it) => (it.id === u.id ? u : it)))
+                }
+                onDeleted={onDelete}
+                onMove={onMove}
+              />
+            ))}
+          </div>
+        </section>
+
+        <div className="h-16" />
+      </div>
+    </div>
+  );
+}
+
+// --- publish card ---------------------------------------------------------
+
+function PublishCard({
+  bot,
+  onSave,
+}: {
+  bot: OwnerBot;
+  onSave: (patch: Partial<OwnerBot>) => Promise<void>;
+}) {
+  const [handle, setHandle] = useState(bot.handle ?? "");
+  const published = bot.status === "published";
+
+  return (
+    <section className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="flex-1">
+          <Field label="Public handle" hint="Your agent will live at /u/<handle>.">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm text-white/40">/u/</span>
+              <input
+                value={handle}
+                onChange={(e) => setHandle(e.target.value.toLowerCase())}
+                placeholder="your-name"
+                className={inputCls}
+              />
+            </div>
+          </Field>
+        </div>
+        <button
+          onClick={() => onSave({ handle })}
+          className="rounded-lg border border-white/12 bg-white/[0.03] px-4 py-2 text-sm text-white/80 hover:border-accent/40"
+        >
+          Save handle
+        </button>
+        <button
+          onClick={() =>
+            onSave({ status: published ? "draft" : "published", handle })
+          }
+          className={
+            "rounded-lg px-4 py-2 text-sm font-medium transition-all " +
+            (published
+              ? "border border-white/12 bg-white/[0.03] text-white/70 hover:text-white"
+              : "bg-accent text-ink hover:shadow-[0_0_24px_-8px] hover:shadow-accent")
+          }
+        >
+          {published ? "Unpublish" : "Publish"}
+        </button>
+      </div>
+      <div className="mt-3 flex items-center gap-2 text-[0.78rem]">
+        <span
+          className={
+            "h-2 w-2 rounded-full " + (published ? "bg-accent" : "bg-white/30")
+          }
+        />
+        <span className="text-white/50">
+          {published ? "Live and public" : "Draft - only you can see it"}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+// --- profile form ---------------------------------------------------------
+
+function ProfileForm({
+  bot,
+  onSave,
+}: {
+  bot: OwnerBot;
+  onSave: (patch: Partial<OwnerBot>) => Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    displayName: bot.displayName,
+    subjectName: bot.subjectName,
+    targetRole: bot.targetRole,
+    contactEmail: bot.contactEmail,
+    tone: bot.tone,
+    languageRule: bot.languageRule,
+    pSubject: bot.pronouns.subject,
+    pObject: bot.pronouns.object,
+    pPossessive: bot.pronouns.possessive,
+    suggested: bot.suggestedQuestions.join("\n"),
+    accent: bot.theme.accent ?? "#C6F24E",
+  });
+
+  function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
+    setForm((f) => ({ ...f, [k]: v }));
+  }
+
+  function save() {
+    onSave({
+      displayName: form.displayName,
+      subjectName: form.subjectName,
+      targetRole: form.targetRole,
+      contactEmail: form.contactEmail,
+      tone: form.tone,
+      languageRule: form.languageRule,
+      pronouns: {
+        subject: form.pSubject,
+        object: form.pObject,
+        possessive: form.pPossessive,
+      },
+      suggestedQuestions: form.suggested
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      theme: { ...bot.theme, accent: form.accent },
+    });
+  }
+
+  return (
+    <section className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+      <h2 className="font-display text-xl text-white">Profile</h2>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Field label="Agent name" hint="Shown in the header.">
+          <input
+            className={inputCls}
+            value={form.displayName}
+            onChange={(e) => set("displayName", e.target.value)}
+          />
+        </Field>
+        <Field label="Your name" hint="The person represented.">
+          <input
+            className={inputCls}
+            value={form.subjectName}
+            onChange={(e) => set("subjectName", e.target.value)}
+          />
+        </Field>
+        <Field label="Target role">
+          <input
+            className={inputCls}
+            value={form.targetRole}
+            onChange={(e) => set("targetRole", e.target.value)}
+          />
+        </Field>
+        <Field label="Contact email">
+          <input
+            className={inputCls}
+            value={form.contactEmail}
+            onChange={(e) => set("contactEmail", e.target.value)}
+          />
+        </Field>
+        <Field label="Tone">
+          <input
+            className={inputCls}
+            value={form.tone}
+            onChange={(e) => set("tone", e.target.value)}
+          />
+        </Field>
+        <Field label="Language rule">
+          <input
+            className={inputCls}
+            value={form.languageRule}
+            onChange={(e) => set("languageRule", e.target.value)}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <Field label="Pronoun (subject)" hint="he / she / they">
+          <input
+            className={inputCls}
+            value={form.pSubject}
+            onChange={(e) => set("pSubject", e.target.value)}
+          />
+        </Field>
+        <Field label="Pronoun (object)" hint="him / her / them">
+          <input
+            className={inputCls}
+            value={form.pObject}
+            onChange={(e) => set("pObject", e.target.value)}
+          />
+        </Field>
+        <Field label="Pronoun (possessive)" hint="his / her / their">
+          <input
+            className={inputCls}
+            value={form.pPossessive}
+            onChange={(e) => set("pPossessive", e.target.value)}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Field label="Suggested questions" hint="One per line.">
+          <textarea
+            rows={4}
+            className={inputCls + " resize-y"}
+            value={form.suggested}
+            onChange={(e) => set("suggested", e.target.value)}
+          />
+        </Field>
+        <Field label="Accent color" hint="Applied to your public page.">
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={form.accent}
+              onChange={(e) => set("accent", e.target.value)}
+              className="h-10 w-14 cursor-pointer rounded-lg border border-white/10 bg-transparent"
+            />
+            <input
+              className={inputCls}
+              value={form.accent}
+              onChange={(e) => set("accent", e.target.value)}
+            />
+          </div>
+        </Field>
+      </div>
+
+      <div className="mt-5 flex justify-end">
+        <button
+          onClick={save}
+          className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-ink transition-all hover:shadow-[0_0_24px_-8px] hover:shadow-accent"
+        >
+          Save profile
+        </button>
+      </div>
+    </section>
+  );
+}

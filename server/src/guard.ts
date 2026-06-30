@@ -7,24 +7,31 @@ export interface GuardOptions {
 
 export interface Guard {
   checkRateLimit(ip: string): { ok: boolean };
-  recordUsage(tokens: number): void;
-  isBudgetExceeded(): boolean;
+  recordUsage(tokens: number, key?: string): void;
+  isBudgetExceeded(key?: string): boolean;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const GLOBAL_KEY = "__global__";
 
 export function createGuard(opts: GuardOptions): Guard {
   const clock = opts.clock ?? Date.now;
   const hits = new Map<string, number[]>();
-  let tokensUsed = 0;
-  let dayStart = clock();
+  // Token usage is tracked per key (one key per bot) so a busy bot only rests
+  // itself, never the whole platform.
+  const usage = new Map<string, { tokens: number; dayStart: number }>();
 
-  function rolloverDay() {
+  function bucket(key: string) {
     const now = clock();
-    if (now - dayStart >= DAY_MS) {
-      tokensUsed = 0;
-      dayStart = now;
+    let b = usage.get(key);
+    if (!b) {
+      b = { tokens: 0, dayStart: now };
+      usage.set(key, b);
+    } else if (now - b.dayStart >= DAY_MS) {
+      b.tokens = 0;
+      b.dayStart = now;
     }
+    return b;
   }
 
   return {
@@ -41,13 +48,11 @@ export function createGuard(opts: GuardOptions): Guard {
       hits.set(ip, recent);
       return { ok: true };
     },
-    recordUsage(tokens) {
-      rolloverDay();
-      tokensUsed += tokens;
+    recordUsage(tokens, key = GLOBAL_KEY) {
+      bucket(key).tokens += tokens;
     },
-    isBudgetExceeded() {
-      rolloverDay();
-      return tokensUsed >= opts.dailyTokenBudget;
+    isBudgetExceeded(key = GLOBAL_KEY) {
+      return bucket(key).tokens >= opts.dailyTokenBudget;
     },
   };
 }

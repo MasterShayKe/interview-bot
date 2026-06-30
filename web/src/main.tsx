@@ -1,11 +1,13 @@
 import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.js";
+import Landing from "./pages/Landing.js";
+import Dashboard from "./pages/Dashboard.js";
+import Onboarding from "./pages/Onboarding.js";
 import { useRoute } from "./lib/router.js";
 import "./index.css";
 
-// Lazy-load the portal so Three.js is only fetched when the route is visited —
-// the chat page stays lightweight.
+// Lazy-load the portal so Three.js is only fetched when the route is visited.
 const Portal = lazy(() => import("./portal/Portal.js"));
 
 function PortalFallback() {
@@ -18,16 +20,28 @@ function PortalFallback() {
   );
 }
 
+const PORTAL_RE = /^\/u\/([a-z0-9-]+)\/portal\/?$/;
+const BOT_RE = /^\/u\/([a-z0-9-]+)\/?$/;
+
 function Root() {
   const path = useRoute();
-  if (path === "/portal") {
+
+  const portalMatch = path.match(PORTAL_RE);
+  if (portalMatch) {
     return (
       <Suspense fallback={<PortalFallback />}>
-        <Portal />
+        <Portal handle={portalMatch[1]} />
       </Suspense>
     );
   }
-  return <App />;
+
+  const botMatch = path.match(BOT_RE);
+  if (botMatch) return <App handle={botMatch[1]} />;
+
+  if (path === "/dashboard") return <Dashboard />;
+  if (path === "/onboarding") return <Onboarding />;
+  if (path === "/login") return <Landing />;
+  return <Landing />;
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

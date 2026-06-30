@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type CommandAction = "clear" | "fit";
 
@@ -9,26 +9,30 @@ interface Command {
   action?: CommandAction;
 }
 
-const COMMANDS: Command[] = [
-  { cmd: "/help", label: "What topics can you cover?", question: "What can you help me with? What topics are you able to cover?" },
-  { cmd: "/cv", label: "Walk through Shay's career", question: "Walk me through Shay's work history and career progression." },
-  { cmd: "/projects", label: "Show main AI projects", question: "What are Shay's main AI projects? Give me an overview." },
-  { cmd: "/about", label: "Shay in a nutshell", question: "Give me a quick overview of who Shay is and what makes him stand out." },
-  { cmd: "/fit", label: "Analyze fit for a job description", question: null, action: "fit" },
-  { cmd: "/clear", label: "Clear conversation", question: null, action: "clear" },
-];
+function buildCommands(name: string): Command[] {
+  return [
+    { cmd: "/help", label: "What topics can you cover?", question: "What can you help me with? What topics are you able to cover?" },
+    { cmd: "/cv", label: `Walk through ${name}'s career`, question: `Walk me through ${name}'s work history and career progression.` },
+    { cmd: "/projects", label: "Show main projects", question: `What are ${name}'s main projects? Give me an overview.` },
+    { cmd: "/about", label: `${name} in a nutshell`, question: `Give me a quick overview of who ${name} is and what makes them stand out.` },
+    { cmd: "/fit", label: "Analyze fit for a job description", question: null, action: "fit" },
+    { cmd: "/clear", label: "Clear conversation", question: null, action: "clear" },
+  ];
+}
 
 interface Props {
+  subjectName: string;
   busy: boolean;
   onSend: (text: string) => void;
   onClear: () => void;
   onFit: () => void;
 }
 
-export default function Composer({ busy, onSend, onClear, onFit }: Props) {
+export default function Composer({ subjectName, busy, onSend, onClear, onFit }: Props) {
   const [input, setInput] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const COMMANDS = useMemo(() => buildCommands(subjectName), [subjectName]);
 
   const isSlash = input.startsWith("/");
   const filter = input.slice(1).toLowerCase();
@@ -123,7 +127,7 @@ export default function Composer({ busy, onSend, onClear, onFit }: Props) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           dir="auto"
-          placeholder="Ask anything about Shay... or type /"
+          placeholder={`Ask anything about ${subjectName}... or type /`}
           className="min-w-0 flex-1 bg-transparent py-2.5 text-[0.95rem] text-white placeholder:text-white/30 focus:outline-none"
         />
         <button

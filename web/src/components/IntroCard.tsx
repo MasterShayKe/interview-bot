@@ -1,31 +1,39 @@
 interface Props {
+  subjectName: string;
+  targetRole?: string;
   suggestions: string[];
   onPick: (q: string) => void;
   onOpenFit: () => void;
 }
 
-export default function IntroCard({ suggestions, onPick, onOpenFit }: Props) {
+export default function IntroCard({
+  subjectName,
+  targetRole,
+  suggestions,
+  onPick,
+  onOpenFit,
+}: Props) {
   return (
     <div className="flex flex-1 flex-col justify-center py-10">
       <div className="animate-fade-up [animation-delay:40ms]">
         <div className="font-mono text-[0.72rem] uppercase tracking-[0.26em] text-accent/90">
-          AI Implementation Lead
+          {targetRole || "Interview Agent"}
         </div>
         <div className="mt-1.5 font-mono text-[0.62rem] uppercase tracking-[0.22em] text-white/35">
-          Enterprise IT · Agents · Automation
+          Strictly grounded · Live demo
         </div>
       </div>
 
       <h1 className="mt-6 font-display text-[2.9rem] leading-[0.96] text-white sm:text-6xl animate-fade-up [animation-delay:120ms]">
         Ask me anything about
         <br />
-        <span className="italic text-accent">Shay Kopilevich</span>.
+        <span className="italic text-accent">{subjectName}</span>.
       </h1>
 
       <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-white/55 animate-fade-up [animation-delay:230ms]">
-        I'm an AI agent Shay engineered to represent him. I answer strictly from
-        his verified background - his experience, the things he has built, and
-        how he works. Ask away:
+        I'm an AI agent built to represent {subjectName}. I answer strictly from
+        a verified background - experience, the things {subjectName} has built,
+        and how they work. Ask away:
       </p>
 
       <div className="mt-8 flex flex-wrap gap-2.5 animate-fade-up [animation-delay:340ms]">

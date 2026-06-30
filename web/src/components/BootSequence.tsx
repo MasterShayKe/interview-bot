@@ -16,10 +16,10 @@ function parseReferrer(ref: string): string {
   return "external link";
 }
 
-function buildLines(ctx: ClientContext): BootLine[] {
+function buildLines(ctx: ClientContext, subjectName: string): BootLine[] {
   const lines: BootLine[] = [
-    { tag: " sys ", text: "Shay Kopilevich · Interview Agent", color: "info" },
-    { tag: " sys ", text: "Model: Claude Sonnet 4.6 · Anthropic SDK · Prompt caching enabled", color: "dim" },
+    { tag: " sys ", text: `${subjectName} · Interview Agent`, color: "info" },
+    { tag: " sys ", text: "Model: Claude · Anthropic SDK · Prompt caching enabled", color: "dim" },
   ];
 
   const deviceParts = [ctx.deviceType, ctx.os, ctx.browser].filter(Boolean);
@@ -69,6 +69,7 @@ const HOLD_MS = 550;
 
 interface Props {
   clientContext: ClientContext;
+  subjectName: string;
   onDone: () => void;
 }
 
@@ -86,8 +87,8 @@ const textClass: Record<BootLine["color"], string> = {
   warn: "text-yellow-300/60",
 };
 
-export default function BootSequence({ clientContext, onDone }: Props) {
-  const lines = useMemo(() => buildLines(clientContext), []);
+export default function BootSequence({ clientContext, subjectName, onDone }: Props) {
+  const lines = useMemo(() => buildLines(clientContext, subjectName), []);
   const [visibleCount, setVisibleCount] = useState(0);
 
   useEffect(() => {
