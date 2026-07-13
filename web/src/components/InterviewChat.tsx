@@ -158,11 +158,10 @@ export default function InterviewChat({
         {!started ? (
           <div className="flex h-full min-h-[11rem] flex-col justify-center py-2">
             <p className="max-w-md font-display text-xl leading-snug text-paper/90">
-              Ask what you would ask in a first interview.
+              Interview Shay&rsquo;s AI.
             </p>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-paper-muted">
-              Answers are drawn only from Shay&rsquo;s verified experience. The agent
-              distinguishes fact from interpretation, and says so when it does not know.
+              Grounded only in verified experience. Start with a question below, or ask your own.
             </p>
           </div>
         ) : (

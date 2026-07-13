@@ -14,13 +14,13 @@ export default function Contact() {
           </div>
         </Reveal>
         <Reveal delay={80}>
-          <h2 className="font-display mx-auto mt-6 max-w-2xl text-balance text-3xl font-medium leading-[1.08] text-paper sm:text-4xl md:text-[3rem]">
-            Let&rsquo;s talk about the operation you need to transform
+          <h2 className="font-display mx-auto mt-6 max-w-2xl text-balance text-3xl font-medium leading-[1.08] text-paper sm:text-4xl md:text-[3.1rem]">
+            Ready to modernize your IT organization?
           </h2>
         </Reveal>
         <Reveal delay={140}>
-          <p className="mx-auto mt-6 max-w-xl text-[1.02rem] leading-relaxed text-paper-muted">
-            {profile.availability}
+          <p className="mx-auto mt-6 max-w-lg text-[1.05rem] leading-relaxed text-paper-muted">
+            If you need enterprise leadership paired with hands-on AI implementation, let&rsquo;s talk.
           </p>
         </Reveal>
 

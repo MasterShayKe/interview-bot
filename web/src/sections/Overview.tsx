@@ -4,7 +4,7 @@ import { Reveal, SectionHeading } from "../components/ui.js";
 export default function Overview() {
   return (
     <section id="overview" className="relative scroll-mt-24 border-y border-white/[0.05] bg-ink-950/40">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
+      <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
         <SectionHeading eyebrow="Executive overview" title="A leader built to run global operations" />
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-16">

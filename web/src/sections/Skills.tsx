@@ -3,7 +3,7 @@ import { Reveal, SectionHeading } from "../components/ui.js";
 
 export default function Skills() {
   return (
-    <section id="skills" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 lg:py-24">
+    <section id="skills" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 lg:py-28">
       <SectionHeading
         eyebrow="Capabilities"
         title="Depth across the operating stack"

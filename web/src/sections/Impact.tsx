@@ -1,65 +1,43 @@
 import { metrics, type Metric } from "../content/profile.js";
-import { Reveal, SectionHeading } from "../components/ui.js";
+import { Reveal, Eyebrow } from "../components/ui.js";
 import { useCountUp } from "../lib/hooks.js";
 
-function MetricFigure({ m, big }: { m: Metric; big: boolean }) {
+function Cell({ m, i }: { m: Metric; i: number }) {
   const { ref, display } = useCountUp(m.value);
   return (
-    <span
-      ref={ref}
-      className={
-        "font-display tabular block font-medium text-paper " +
-        (big ? "text-4xl sm:text-5xl" : "text-3xl sm:text-[2.15rem]")
-      }
-    >
-      {m.prefix && <span className="text-brass">{m.prefix}</span>}
-      {display}
-      {m.suffix && <span className="text-brass">{m.suffix}</span>}
-    </span>
-  );
-}
-
-function Card({ m, big, i }: { m: Metric; big: boolean; i: number }) {
-  return (
     <Reveal
-      delay={i * 60}
-      className={
-        "flex flex-col justify-between rounded-xl border border-white/[0.07] bg-white/[0.015] p-5 transition-colors hover:border-white/[0.14] " +
-        (big ? "sm:p-6" : "")
-      }
+      delay={i * 55}
+      className="flex flex-col justify-between gap-6 border-b border-r border-white/[0.07] px-4 py-7 sm:px-7 sm:py-9"
     >
-      <MetricFigure m={m} big={big} />
-      <div className="mt-3">
-        <div className={"font-medium text-paper/90 " + (big ? "text-[0.92rem]" : "text-[0.84rem]")}>
-          {m.label}
-        </div>
-        {m.note && <div className="mt-0.5 text-[0.75rem] text-paper-faint">{m.note}</div>}
+      <span
+        ref={ref}
+        className="font-display tabular block text-[2.7rem] font-medium leading-none text-paper sm:text-[3.4rem]"
+      >
+        {m.prefix && <span className="text-brass">{m.prefix}</span>}
+        {display}
+        {m.suffix && <span className="text-brass">{m.suffix}</span>}
+      </span>
+      <div>
+        <div className="text-[0.9rem] font-medium text-paper/90">{m.label}</div>
+        {m.note && <div className="mt-1 text-[0.76rem] text-paper-faint">{m.note}</div>}
       </div>
     </Reveal>
   );
 }
 
 export default function Impact() {
-  const primary = metrics.filter((m) => m.primary);
-  const secondary = metrics.filter((m) => !m.primary);
-
   return (
-    <section id="impact" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 lg:py-24">
-      <SectionHeading
-        eyebrow="Executive impact"
-        title="Transformation you can measure"
-        lead="A decade of enterprise operations, quantified. Every figure below is drawn from real programs Shay owned and delivered."
-      />
+    <section id="impact" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 lg:py-28">
+      <Reveal className="flex items-center justify-between">
+        <Eyebrow>By the numbers</Eyebrow>
+        <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper-faint">
+          At NiCE
+        </span>
+      </Reveal>
 
-      <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {primary.map((m, i) => (
-          <Card key={m.label} m={m} big i={i} />
-        ))}
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {secondary.map((m, i) => (
-          <Card key={m.label} m={m} big={false} i={i} />
+      <div className="mt-8 grid grid-cols-2 border-l border-t border-white/[0.07] lg:grid-cols-4">
+        {metrics.map((m, i) => (
+          <Cell key={m.label} m={m} i={i} />
         ))}
       </div>
     </section>

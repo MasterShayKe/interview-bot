@@ -14,7 +14,7 @@ export default function Interview() {
   }
 
   return (
-    <section id="interview" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 lg:py-24">
+    <section id="interview" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 lg:py-28">
       <SectionHeading
         eyebrow="Interview Shay"
         title="Ask the questions you would ask in a first interview"

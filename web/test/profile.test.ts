@@ -21,12 +21,11 @@ describe("profile content integrity", () => {
     }
   });
 
-  it("has six fully-populated case studies", () => {
+  it("has six before/after transformations with headline metrics", () => {
     expect(caseStudies).toHaveLength(6);
     for (const c of caseStudies) {
-      expect(c.challenge).toBeTruthy();
-      expect(c.action).toBeTruthy();
-      expect(c.outcomes.length).toBeGreaterThan(0);
+      expect(c.before.length).toBeGreaterThan(0);
+      expect(c.after.length).toBeGreaterThan(0);
       expect(c.headline.value).toBeTruthy();
     }
   });

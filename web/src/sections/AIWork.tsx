@@ -4,11 +4,11 @@ import { Reveal, SectionHeading } from "../components/ui.js";
 export default function AIWork() {
   return (
     <section id="ai" className="relative scroll-mt-24 border-y border-white/[0.05] bg-ink-950/40">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
+      <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
         <SectionHeading
-          eyebrow="From AI strategy to working systems"
-          title="He builds the systems, not just the strategy"
-          lead="The difference that matters to an operation: Shay designs, ships, and runs production AI - inside the enterprise and on his own."
+          eyebrow="AI that solves operational problems"
+          title="He builds the systems, not just the roadmap"
+          lead="Most leaders buy AI. Shay ships it - production systems that remove real operational load, inside the enterprise and on his own."
         />
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -5,8 +5,9 @@
 export const profile = {
   name: "Shay Kopilevich",
   title: "Global IT Operations & AI Transformation Leader",
+  role: "Global IT Operations Leader",
   tagline:
-    "I lead global IT organizations and redesign how enterprise operations work - combining structured process, modern endpoint management, automation, and production AI.",
+    "Building enterprise operations that scale through AI, automation, and disciplined execution.",
   location: "Hod HaSharon, Israel",
   availability:
     "Open to IT Operations, Global IT Management, AI Operations, and enterprise automation leadership roles in Israel - onsite, hybrid, or remote.",
@@ -75,105 +76,73 @@ export interface CaseStudy {
   index: string;
   title: string;
   domain: string;
-  challenge: string;
-  action: string;
-  outcomes: string[];
+  before: string[];
+  after: string[];
   headline: { value: string; label: string };
 }
 
+// Each transformation reads as a Before -> After proof of business impact.
 export const caseStudies: CaseStudy[] = [
   {
     index: "01",
-    title: "Modern endpoint provisioning",
+    title: "Laptop provisioning",
     domain: "Endpoint Engineering",
-    challenge:
-      "Traditional laptop provisioning took roughly 4-5 hours and required access to the corporate office network.",
-    action:
-      "Led the move from SCCM and local provisioning to Microsoft Intune and Windows Autopilot.",
-    outcomes: [
-      "Provisioning reduced to roughly 2 hours, done anywhere with internet access",
-      "About 3,000 laptops processed each year",
-      "Roughly 9,000 technician hours saved annually",
-      "Freed regional technicians to grow into endpoint architecture roles",
-    ],
-    headline: { value: "~9,000", label: "Hrs saved / year" },
+    before: ["4-5 hours per device", "Office network required", "Manual SCCM imaging", "Technician-heavy"],
+    after: ["Under 2 hours", "Anywhere with internet", "Intune + Windows Autopilot", "~9,000 technician hours saved / year"],
+    headline: { value: "~9,000", label: "Hours saved / year" },
   },
   {
     index: "02",
-    title: "AI-powered Tier-0 support",
+    title: "Frontline support",
     domain: "Production AI",
-    challenge: "High-volume recurring support questions and manual ticket handling.",
-    action:
-      "Designed and deployed an AI support channel serving the entire NiCE workforce - walking users through approved knowledge, recommending fixes, opening and escalating tickets on their behalf, and routing hands-on work to humans.",
-    outcomes: [
-      "Deployed across an 11,000-employee environment",
-      "Reduced relevant Service Desk workload by ~35%",
-      "Automated hundreds to ~1,000 interactions per period",
-    ],
-    headline: { value: "35%", label: "Workload reduced" },
+    before: ["Manual ticket handling", "Repetitive questions to humans", "Full Service Desk load"],
+    after: ["AI resolves from approved knowledge", "Opens and escalates tickets itself", "~35% of workload removed"],
+    headline: { value: "35%", label: "Workload removed" },
   },
   {
     index: "03",
-    title: "Global Live Chat",
+    title: "First contact resolution",
     domain: "Service Delivery",
-    challenge: "Employees relied primarily on conventional ticket channels.",
-    action:
-      "Introduced the company's first support Live Chat service, secured CIO approval, piloted it, and rolled it out globally.",
-    outcomes: [
-      "Roughly 150-200 chats handled per day",
-      "Contributed to raising First Contact Resolution from 65% to 80%",
-    ],
-    headline: { value: "150-200", label: "Chats / day" },
+    before: ["Ticket-only channels", "FCR at 65%", "Slower first response"],
+    after: ["First company-wide Live Chat, global", "~150-200 chats a day", "FCR raised to 80%"],
+    headline: { value: "65 → 80%", label: "First contact resolution" },
   },
   {
     index: "04",
-    title: "Zero-disruption M&A integration",
+    title: "M&A integration",
     domain: "M&A Integration",
-    challenge:
-      "Newly acquired organizations needed rapid integration into corporate identity, endpoint, infrastructure, and support standards.",
-    action:
-      "Created and repeatedly improved a structured M&A integration playbook.",
-    outcomes: [
-      "Delivered 8 acquisitions, roughly 50-400 employees each",
-      "Primarily European organizations",
-      "Typical end-to-end integration in 2-3 months",
-      "Zero operational downtime or disruption",
-    ],
-    headline: { value: "8", label: "Acquisitions, 0 downtime" },
+    before: ["Ad-hoc, slow integrations", "Identity and endpoint gaps", "Downtime risk"],
+    after: ["Repeatable integration playbook", "8 acquisitions, 50-400 people each", "2-3 months, zero downtime"],
+    headline: { value: "8", label: "Integrations, zero downtime" },
   },
   {
     index: "05",
-    title: "Contractor security transformation",
+    title: "Contractor access",
     domain: "Security & Governance",
-    challenge:
-      "Contractors used unmanaged personal devices to access the corporate network.",
-    action:
-      "Moved contractors from BYOD access to fully managed corporate devices and a controlled access methodology.",
-    outcomes: [
-      "Roughly 800 initially planned; nearly 2,000 migrated in the first year",
-      "Improved governance, endpoint control, and corporate access security",
-    ],
+    before: ["Unmanaged personal devices", "Uncontrolled network access", "~800 in scope"],
+    after: ["Fully managed corporate devices", "Controlled access methodology", "~2,000 secured in year one"],
     headline: { value: "~2,000", label: "Contractors secured" },
   },
   {
     index: "06",
-    title: "Enterprise Mac adoption",
+    title: "Mac at enterprise scale",
     domain: "Platform Engineering",
-    challenge: "Macs were available only to a limited number of UX designers.",
-    action:
-      "Tested MacBooks with individual business units and measured developer workflow performance before expanding support.",
-    outcomes: [
-      "Introduced MacBooks to development populations",
-      "Testing showed ~70% faster performance for relevant workflows",
-      "Built enterprise Mac support and management capabilities from scratch",
-    ],
+    before: ["Macs for a few designers only", "No Mac support stack", "No management or security"],
+    after: ["MacBooks for developer teams", "~70% faster dev workflows", "Full Jamf stack built from scratch"],
     headline: { value: "~70%", label: "Faster dev workflows" },
   },
 ];
 
 export const leadership = {
   intro:
-    "At NiCE, Shay led a 67-person global organization with 7 direct reports, structured across three support tiers plus delivery.",
+    "A 67-person global organization, structured across three tiers, run on transparency and disciplined process.",
+  stats: [
+    { value: "67", label: "IT professionals led" },
+    { value: "7", label: "Direct reports" },
+    { value: "$8M", label: "Budget owned" },
+    { value: "11,000", label: "Employees served" },
+    { value: "12,000", label: "Endpoints" },
+  ],
   org: [
     { tier: "Direct reports", detail: "Regional Team Lead, Service Desk Manager, Architects Lead + PMs", count: "7" },
     { tier: "Tier 1 - Service Desk", detail: "Front-line global support", count: "~30" },
@@ -369,25 +338,24 @@ export const skills: SkillGroup[] = [
   },
 ];
 
-// Prompt buttons for the interview section (mirrors persona.suggested_questions).
+// Prompt buttons for the interview section. MUST stay identical to
+// spec/persona.yaml suggested_questions (a test enforces this).
 export const suggestedQuestions = [
   "Tell me about Shay",
   "Why should we hire him?",
-  "How has he used AI in enterprise IT?",
-  "Walk me through the Intune transformation",
-  "How does he lead global teams?",
-  "Tell me about the M&A integrations",
-  "What was his biggest failure?",
+  "His leadership style",
+  "His biggest achievement",
+  "How he uses AI in enterprise IT",
+  "The Intune migration",
+  "His biggest failure",
   "Why did he leave NiCE?",
-  "What roles is he targeting?",
-  "What is his hands-on technical experience?",
 ];
 
 export const navItems = [
-  { id: "overview", label: "Overview" },
   { id: "impact", label: "Impact" },
-  { id: "experience", label: "Experience" },
-  { id: "ai", label: "AI & Automation" },
-  { id: "interview", label: "Interview Shay" },
+  { id: "overview", label: "Overview" },
+  { id: "transformation", label: "Transformations" },
+  { id: "ai", label: "AI Systems" },
+  { id: "interview", label: "Interview" },
   { id: "contact", label: "Contact" },
 ];

@@ -3,7 +3,7 @@ import { Reveal, SectionHeading } from "../components/ui.js";
 
 export default function Timeline() {
   return (
-    <section id="experience" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 lg:py-24">
+    <section id="experience" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 lg:py-28">
       <SectionHeading
         eyebrow="Career"
         title="A decade of increasing operational scope"

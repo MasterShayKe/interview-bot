@@ -4,17 +4,27 @@ import { Reveal, SectionHeading } from "../components/ui.js";
 export default function Leadership() {
   return (
     <section id="leadership" className="relative scroll-mt-24 border-y border-white/[0.05] bg-ink-950/40">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
-        <SectionHeading
-          eyebrow="Leadership at global scale"
-          title="Structure first, then AI as a force multiplier"
-          lead={leadership.intro}
-        />
+      <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
+        <SectionHeading eyebrow="Leadership" title="Leading at global scale" lead={leadership.intro} />
 
-        {/* Philosophy pull-quote */}
+        {/* Numbers band */}
+        <Reveal delay={60}>
+          <div className="mt-10 grid grid-cols-2 gap-y-8 border-y border-white/[0.07] py-8 sm:grid-cols-3 lg:grid-cols-5">
+            {leadership.stats.map((s) => (
+              <div key={s.label}>
+                <div className="font-display tabular text-3xl font-medium text-paper sm:text-4xl">
+                  {s.value}
+                </div>
+                <div className="mt-1.5 text-[0.78rem] text-paper-faint">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+
+        {/* Philosophy */}
         <Reveal delay={80}>
-          <blockquote className="relative mt-10 max-w-3xl">
-            <span className="font-display absolute -left-1 -top-6 text-6xl leading-none text-brass/30" aria-hidden>
+          <blockquote className="relative mt-14 max-w-3xl">
+            <span className="font-display absolute -left-1 -top-7 text-6xl leading-none text-brass/30" aria-hidden>
               &ldquo;
             </span>
             <p className="font-display text-balance text-xl font-normal leading-snug text-paper/90 sm:text-2xl">
@@ -23,11 +33,11 @@ export default function Leadership() {
           </blockquote>
         </Reveal>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-2 lg:gap-14">
-          {/* Org structure */}
+        <div className="mt-14 grid gap-10 lg:grid-cols-2 lg:gap-16">
+          {/* Org */}
           <Reveal>
             <span className="eyebrow text-paper-faint">The organization</span>
-            <ul className="mt-4 space-y-0">
+            <ul className="mt-4">
               {leadership.org.map((o) => (
                 <li
                   key={o.tier}
@@ -46,7 +56,7 @@ export default function Leadership() {
           </Reveal>
 
           {/* Rhythm + style */}
-          <div className="space-y-8">
+          <div className="space-y-9">
             <Reveal delay={80}>
               <span className="eyebrow text-paper-faint">Operating rhythm</span>
               <ul className="mt-4 grid gap-2">
@@ -62,7 +72,7 @@ export default function Leadership() {
             </Reveal>
 
             <Reveal delay={140}>
-              <span className="eyebrow text-paper-faint">Leadership style</span>
+              <span className="eyebrow text-paper-faint">How he leads</span>
               <div className="mt-3 flex flex-wrap gap-2">
                 {leadership.style.map((s) => (
                   <span key={s} className="rounded-full border border-white/[0.09] bg-white/[0.02] px-3 py-1.5 text-[0.78rem] text-paper-muted">
@@ -76,9 +86,9 @@ export default function Leadership() {
 
         {/* Recognition */}
         <Reveal delay={100}>
-          <div className="mt-12 flex flex-col gap-4 rounded-2xl border border-brass/20 bg-brass/[0.04] p-6 sm:flex-row sm:items-center sm:gap-8">
+          <div className="mt-14 flex flex-col gap-4 rounded-2xl border border-brass/20 bg-brass/[0.04] p-6 sm:flex-row sm:items-center sm:gap-8">
             <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-brass/80">
-              Described by senior leadership as
+              Senior leadership called him
             </span>
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               {leadership.recognition.map((r) => (
