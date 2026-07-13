@@ -25,7 +25,7 @@ export const profile = {
 // Drop a professional headshot at web/public/shay-photo.jpg and set available: true.
 // Until then the UI falls back to the SK monogram.
 export const photo = {
-  available: false,
+  available: true,
   path: "/shay-photo.jpg",
 } as const;
 
