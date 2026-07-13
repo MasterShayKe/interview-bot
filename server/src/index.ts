@@ -33,6 +33,27 @@ const MAX_OUTPUT_TOKENS = Number(process.env.MAX_OUTPUT_TOKENS ?? 800);
 const FIT_MAX_OUTPUT_TOKENS = Number(process.env.FIT_MAX_OUTPUT_TOKENS ?? 1100);
 const MAX_JD_CHARS = Number(process.env.MAX_JD_CHARS ?? 8000);
 const MAX_MESSAGES = 20;
+const MAX_MSG_CHARS = Number(process.env.MAX_MSG_CHARS ?? 4000);
+
+/**
+ * Sanitize client-supplied conversation history. The client is untrusted:
+ * we accept only user/assistant text turns (never a forged system role),
+ * cap each turn's length to bound token spend and injection payload size,
+ * and keep only the most recent turns. The agent has no tools, so the worst
+ * case of any surviving injection is off-script text - never code execution.
+ */
+function sanitizeMessages(raw: unknown): ChatMessage[] {
+  const arr = Array.isArray(raw) ? raw : [];
+  return arr
+    .filter(
+      (m): m is ChatMessage =>
+        !!m &&
+        typeof (m as ChatMessage).content === "string" &&
+        ((m as ChatMessage).role === "user" || (m as ChatMessage).role === "assistant"),
+    )
+    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MSG_CHARS) }))
+    .slice(-MAX_MESSAGES);
+}
 const SUGGESTIONS_MODEL = "claude-haiku-4-5-20251001";
 
 async function generateFollowUps(
@@ -87,10 +108,10 @@ app.post("/api/chat", async (req, reply) => {
     clientContext?: ClientContext;
     sessionDurationSeconds?: number;
   };
-  const messages = (body.messages ?? []).slice(-MAX_MESSAGES);
-  if (messages.length === 0) {
+  const messages = sanitizeMessages(body.messages);
+  if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
     reply.code(400);
-    return { error: "No messages provided." };
+    return { error: "No valid user message provided." };
   }
 
   const visitorContext = buildVisitorContext(

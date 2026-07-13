@@ -275,40 +275,29 @@ export const aiSystems: AiSystem[] = [
     ],
   },
   {
-    title: "Continuous compliance agents",
-    tag: "In production at NiCE",
+    title: "Orchestrated marketing team",
+    tag: "In production at Unboxing",
     category: "production",
     summary:
-      "AI-driven continuous audit across ISO 27001, SOC 2, and GDPR - governance a CIO can defend.",
+      "A multi-agent platform running a full marketing department for Unboxing - an orchestrator directing strategy, content, scheduling, analytics, and experimentation.",
     points: [
-      "Freed roughly three FTEs of repetitive manual audit effort",
-      "Widened and standardized audit coverage",
+      "Agents own reels, stories, long-form, scheduling, and A/B testing",
+      "RAG-style versioned brand context, cost accounting, admin dashboard",
     ],
   },
   {
-    title: "Sales enablement agent",
-    tag: "In production at NiCE",
+    title: "AI content engine",
+    tag: "In production at Bawnzy",
     category: "production",
     summary:
-      "Guides sales teams through hundreds of SKUs and compatible product combinations.",
+      "An AI-driven content engine producing Instagram content for Bawnzy end to end - from idea to published post, on a schedule, with no human in the loop.",
     points: [
-      "Assembles the correct SKU suite on demand",
-      "Removes dependency on tribal knowledge",
+      "End-to-end script, design, render, and publish pipeline",
+      "Running in production, not a demo",
     ],
   },
   {
-    title: "Multi-agent content platform",
-    tag: "Built and shipped solo",
-    category: "personal",
-    summary:
-      "Eight orchestrated agents running as a full department: strategy, production, analytics, and A/B.",
-    points: [
-      "RAG-style versioned context, cost accounting, admin dashboard",
-      "Proof he architects and ships multi-agent systems end to end",
-    ],
-  },
-  {
-    title: "Multi-channel assistant",
+    title: "Multi-channel assistants",
     tag: "Built and shipped solo",
     category: "personal",
     summary:

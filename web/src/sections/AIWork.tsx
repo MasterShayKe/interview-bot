@@ -9,8 +9,8 @@ export default function AIWork() {
     <section id="ai" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 lg:py-28">
       <SectionHeading
         eyebrow="AI in production"
-        title="He has already put AI in the core of the operation"
-        lead="Not a slide. Production systems, running inside an 11,000-person enterprise - designed, shipped, and owned. This is the capability most IT leaders are still promising."
+        title="He does not present an AI roadmap. He ships it."
+        lead="Live systems, not slides - from Tier-0 support inside an 11,000-person enterprise to autonomous multi-agent platforms he architects and runs himself. The capability most IT leaders are still promising."
       />
 
       {/* Production, enterprise-scale AI: the headline proof */}
@@ -44,9 +44,9 @@ export default function AIWork() {
       <Reveal delay={80}>
         <div className="mt-12 border-t border-white/[0.06] pt-8">
           <p className="max-w-2xl text-[0.92rem] leading-relaxed text-paper-muted">
-            <span className="font-medium text-paper">And he builds it himself.</span> Outside
-            work, Shay architects and ships production-grade agent systems solo - the proof that
-            the enterprise AI above is his craft, not a vendor&rsquo;s.
+            <span className="font-medium text-paper">And it is all his own craft.</span> The
+            systems above are designed, built, and operated by Shay - not bought from a vendor.
+            A few more he has shipped:
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {personal.map((s, i) => (
