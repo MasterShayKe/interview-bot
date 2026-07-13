@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import Nav from "./sections/Nav.js";
 import Hero from "./sections/Hero.js";
 import Impact from "./sections/Impact.js";
-import Overview from "./sections/Overview.js";
-import CaseStudies from "./sections/CaseStudies.js";
-import Leadership from "./sections/Leadership.js";
-import Timeline from "./sections/Timeline.js";
+import Thesis from "./sections/Thesis.js";
 import AIWork from "./sections/AIWork.js";
+import CaseStudies from "./sections/CaseStudies.js";
+import Overview from "./sections/Overview.js";
+import Leadership from "./sections/Leadership.js";
+import Recommendations from "./sections/Recommendations.js";
+import Timeline from "./sections/Timeline.js";
 import Skills from "./sections/Skills.js";
 import Interview from "./sections/Interview.js";
 import Contact from "./sections/Contact.js";
@@ -31,11 +33,13 @@ export default function App() {
       <main id="main">
         <Hero />
         <Impact />
-        <Overview />
-        <CaseStudies />
-        <Leadership />
-        <Timeline />
+        <Thesis />
         <AIWork />
+        <CaseStudies />
+        <Overview />
+        <Leadership />
+        <Recommendations />
+        <Timeline />
         <Skills />
         <Interview />
         <Contact />

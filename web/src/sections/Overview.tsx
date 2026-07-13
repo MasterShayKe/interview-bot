@@ -1,11 +1,11 @@
-import { overview } from "../content/profile.js";
+import { overview, profile } from "../content/profile.js";
 import { Reveal, SectionHeading } from "../components/ui.js";
 
 export default function Overview() {
   return (
     <section id="overview" className="relative scroll-mt-24 border-y border-white/[0.05] bg-ink-950/40">
       <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
-        <SectionHeading eyebrow="Executive overview" title="A leader built to run global operations" />
+        <SectionHeading eyebrow="Executive overview" title="Director-grade scope, hands-on range" />
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-16">
           <div className="space-y-5 text-[1.05rem] leading-relaxed text-paper-muted">
@@ -19,6 +19,9 @@ export default function Overview() {
               <p className="border-l-2 border-brass/50 pl-5 text-paper">
                 {overview.differentiator}
               </p>
+            </Reveal>
+            <Reveal delay={220}>
+              <p className="text-[0.95rem] text-paper-faint">{profile.availabilityNote}</p>
             </Reveal>
           </div>
 

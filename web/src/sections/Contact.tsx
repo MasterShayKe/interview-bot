@@ -1,7 +1,14 @@
-import { profile } from "../content/profile.js";
+import { profile, lookingFor } from "../content/profile.js";
 import { Reveal, Eyebrow } from "../components/ui.js";
 import { askTheAI, handleResume, resumeCtaLabel } from "../lib/actions.js";
 import { track } from "../lib/analytics.js";
+
+const qualifiers = [
+  { k: "Level", v: lookingFor.level },
+  { k: "Focus", v: lookingFor.function },
+  { k: "Location", v: lookingFor.geography },
+  { k: "Model", v: lookingFor.model },
+];
 
 export default function Contact() {
   return (
@@ -22,6 +29,19 @@ export default function Contact() {
           <p className="mx-auto mt-6 max-w-lg text-[1.05rem] leading-relaxed text-paper-muted">
             If you need enterprise leadership paired with hands-on AI implementation, let&rsquo;s talk.
           </p>
+        </Reveal>
+
+        <Reveal delay={180}>
+          <dl className="mx-auto mt-10 grid max-w-2xl grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.04] text-left sm:grid-cols-4">
+            {qualifiers.map((q) => (
+              <div key={q.k} className="bg-ink px-4 py-4">
+                <dt className="font-mono text-[0.56rem] uppercase tracking-[0.16em] text-paper-faint">
+                  {q.k}
+                </dt>
+                <dd className="mt-1 text-[0.82rem] leading-snug text-paper/90">{q.v}</dd>
+              </div>
+            ))}
+          </dl>
         </Reveal>
 
         <Reveal delay={200}>

@@ -5,23 +5,53 @@
 export const profile = {
   name: "Shay Kopilevich",
   title: "Global IT Operations & AI Transformation Leader",
-  role: "Global IT Operations Leader",
+  role: "Global IT Operations + Applied AI",
   tagline:
-    "Building enterprise operations that scale through AI, automation, and disciplined execution.",
+    "I run enterprise IT organizations at global scale, and personally build the production AI that modernizes them. Not a roadmap - shipped, to an 11,000-person workforce.",
+  // Scope-over-title frame: pre-empts the "Manager by title" objection.
+  scope:
+    "$8M budget - 67 people - 8 countries - 8 acquisitions - reporting to the CIO on strategy.",
   location: "Hod HaSharon, Israel",
   availability:
     "Open to IT Operations, Global IT Management, AI Operations, and enterprise automation leadership roles in Israel - onsite, hybrid, or remote.",
+  // Own the gap: surfaced confidently instead of hidden in the chat.
+  availabilityNote:
+    "Available because the NiCE role relocated to the United States with the CEO - not because of performance. Ready to lead the next transformation now.",
   email: "shaykopi@gmail.com",
   linkedin: "https://www.linkedin.com/in/shay-kopilevich-25b828145/",
   github: "https://github.com/MasterShayKe/",
 } as const;
 
-// If a real resume PDF is dropped at web/public/<file>, set available: true.
-// Until then, the CTA falls back to an email request instead of a broken link.
-export const resume = {
+// Drop a professional headshot at web/public/shay-photo.jpg and set available: true.
+// Until then the UI falls back to the SK monogram.
+export const photo = {
   available: false,
+  path: "/shay-photo.jpg",
+} as const;
+
+// A real resume PDF is generated from this content into web/public.
+export const resume = {
+  available: true,
   path: "/Shay-Kopilevich-Resume.pdf",
 } as const;
+
+// What a recruiter needs to qualify the fit in five seconds.
+export const lookingFor = {
+  level: "Director / Head of IT Operations",
+  function: "Global IT Operations, AI Operations, Enterprise Automation",
+  geography: "Israel",
+  model: "Onsite, hybrid, or remote",
+};
+
+// Named recommendations render only when populated. Do not invent entries -
+// paste real LinkedIn recommendations here (name, title, company, quote).
+export interface Recommendation {
+  quote: string;
+  name: string;
+  title: string;
+  company: string;
+}
+export const recommendations: Recommendation[] = [];
 
 export const targetRoles = [
   "IT Operations Manager",
@@ -43,14 +73,14 @@ export interface Metric {
 
 // Prefix/suffix are split out so the count-up animation only touches the number.
 export const metrics: Metric[] = [
-  { value: "11,000", label: "Employees supported", note: "Global workforce at NiCE", primary: true },
-  { value: "12,000", label: "Enterprise endpoints", note: "Windows, macOS & Linux", primary: true },
-  { value: "67", label: "Global IT professionals led", note: "Across three tiers", primary: true },
-  { prefix: "$", value: "8", suffix: "M", label: "Annual CAPEX + OPEX", note: "Budget ownership", primary: true },
-  { value: "8", label: "Acquisitions integrated", note: "Zero operational downtime" },
-  { value: "35", suffix: "%", label: "Service Desk workload cut", note: "Through production AI" },
-  { value: "65 → 80", suffix: "%", label: "First Contact Resolution", note: "Measured improvement" },
-  { prefix: "~", value: "9,000", label: "Technician hours saved / yr", note: "Endpoint automation" },
+  { value: "11,000", label: "Workforce served", note: "Across 8 countries", primary: true },
+  { prefix: "$", value: "8", suffix: "M", label: "Budget owned", note: "Full CAPEX + OPEX", primary: true },
+  { value: "67", label: "IT professionals led", note: "Three tiers + delivery", primary: true },
+  { value: "8", label: "Acquisitions absorbed", note: "Zero downtime, growth on demand", primary: true },
+  { value: "35", suffix: "%", label: "Frontline cost removed", note: "Production AI, headcount held" },
+  { prefix: "~", value: "9,000", label: "Engineering hours reclaimed / yr", note: "Redeployed from provisioning" },
+  { value: "12,000", label: "Endpoints modernized", note: "Windows, macOS & Linux" },
+  { value: "65 → 80", suffix: "%", label: "Resolved on first contact", note: "Employee experience" },
 ];
 
 export const overview = {
@@ -82,54 +112,56 @@ export interface CaseStudy {
 }
 
 // Each transformation reads as a Before -> After proof of business impact.
+// Ordered to lead with the AI and M&A stories - the differentiating and the
+// most executive - and to keep the tactical helpdesk metric out of the lead.
 export const caseStudies: CaseStudy[] = [
   {
     index: "01",
-    title: "Laptop provisioning",
-    domain: "Endpoint Engineering",
-    before: ["4-5 hours per device", "Office network required", "Manual SCCM imaging", "Technician-heavy"],
-    after: ["Under 2 hours", "Anywhere with internet", "Intune + Windows Autopilot", "~9,000 technician hours saved / year"],
-    headline: { value: "~9,000", label: "Hours saved / year" },
+    title: "Production AI in the core of support",
+    domain: "Applied AI",
+    before: ["Every recurring issue hit a human", "Manual ticket handling", "Full frontline cost"],
+    after: ["AI resolves from approved knowledge", "Opens and escalates tickets itself", "~35% of frontline cost removed, headcount held"],
+    headline: { value: "35%", label: "Of frontline cost removed" },
   },
   {
     index: "02",
-    title: "Frontline support",
-    domain: "Production AI",
-    before: ["Manual ticket handling", "Repetitive questions to humans", "Full Service Desk load"],
-    after: ["AI resolves from approved knowledge", "Opens and escalates tickets itself", "~35% of workload removed"],
-    headline: { value: "35%", label: "Workload removed" },
+    title: "M&A integration at will",
+    domain: "M&A Integration",
+    before: ["Ad-hoc, slow integrations", "Identity and endpoint gaps", "Downtime risk to the deal"],
+    after: ["Repeatable integration playbook", "8 acquisitions, 50-400 people each", "2-3 months each, zero downtime"],
+    headline: { value: "8", label: "Acquisitions absorbed, zero downtime" },
   },
   {
     index: "03",
-    title: "First contact resolution",
-    domain: "Service Delivery",
-    before: ["Ticket-only channels", "FCR at 65%", "Slower first response"],
-    after: ["First company-wide Live Chat, global", "~150-200 chats a day", "FCR raised to 80%"],
-    headline: { value: "65 → 80%", label: "First contact resolution" },
+    title: "Endpoint provisioning, re-engineered",
+    domain: "Endpoint Engineering",
+    before: ["4-5 hours per device", "Office network required", "Manual SCCM imaging"],
+    after: ["Under 2 hours, anywhere with internet", "Intune + Windows Autopilot", "~9,000 engineering hours reclaimed / year"],
+    headline: { value: "~9,000", label: "Hours returned to engineering / yr" },
   },
   {
     index: "04",
-    title: "M&A integration",
-    domain: "M&A Integration",
-    before: ["Ad-hoc, slow integrations", "Identity and endpoint gaps", "Downtime risk"],
-    after: ["Repeatable integration playbook", "8 acquisitions, 50-400 people each", "2-3 months, zero downtime"],
-    headline: { value: "8", label: "Integrations, zero downtime" },
+    title: "Contractor access under governance",
+    domain: "Security & Risk",
+    before: ["Unmanaged personal devices", "Uncontrolled network access", "~800 in scope"],
+    after: ["Fully managed corporate devices", "Controlled access methodology", "~2,000 brought under governance in year one"],
+    headline: { value: "~2,000", label: "Endpoints brought under governance" },
   },
   {
     index: "05",
-    title: "Contractor access",
-    domain: "Security & Governance",
-    before: ["Unmanaged personal devices", "Uncontrolled network access", "~800 in scope"],
-    after: ["Fully managed corporate devices", "Controlled access methodology", "~2,000 secured in year one"],
-    headline: { value: "~2,000", label: "Contractors secured" },
+    title: "First-contact resolution",
+    domain: "Service Delivery",
+    before: ["Ticket-only channels", "Resolved on first contact: 65%", "Slower first response"],
+    after: ["First company-wide Live Chat, global", "Secured CIO sponsorship, piloted, scaled", "First-contact resolution to 80%"],
+    headline: { value: "65 → 80%", label: "Resolved on first contact" },
   },
   {
     index: "06",
     title: "Mac at enterprise scale",
     domain: "Platform Engineering",
-    before: ["Macs for a few designers only", "No Mac support stack", "No management or security"],
-    after: ["MacBooks for developer teams", "~70% faster dev workflows", "Full Jamf stack built from scratch"],
-    headline: { value: "~70%", label: "Faster dev workflows" },
+    before: ["Macs for a few designers only", "No support stack", "No management or security"],
+    after: ["MacBooks for developer teams", "~70% faster developer workflows", "Full Jamf stack built from scratch"],
+    headline: { value: "~70%", label: "Faster developer workflows" },
   },
 ];
 
@@ -225,6 +257,7 @@ export const timeline: Position[] = [
 export interface AiSystem {
   title: string;
   tag: string;
+  category: "production" | "personal";
   summary: string;
   points: string[];
 }
@@ -232,62 +265,68 @@ export interface AiSystem {
 export const aiSystems: AiSystem[] = [
   {
     title: "Enterprise support agent",
-    tag: "Deployed at NiCE",
+    tag: "In production at NiCE",
+    category: "production",
     summary:
-      "AI Tier-0 support for 11,000 employees, integrated with knowledge, incident, request, and escalation workflows.",
+      "AI Tier-0 support for 11,000 employees, wired into knowledge, incident, request, and escalation workflows.",
     points: [
       "Resolves from approved knowledge and opens tickets on the user's behalf",
-      "Escalates and routes hands-on work to human teams",
+      "Removed ~35% of frontline cost with headcount held flat",
     ],
   },
   {
     title: "Continuous compliance agents",
-    tag: "Deployed at NiCE",
+    tag: "In production at NiCE",
+    category: "production",
     summary:
-      "AI-driven continuous audit support across ISO 27001, SOC 2, and GDPR.",
+      "AI-driven continuous audit across ISO 27001, SOC 2, and GDPR - governance a CIO can defend.",
     points: [
       "Freed roughly three FTEs of repetitive manual audit effort",
-      "Improved consistency and breadth of audit coverage",
+      "Widened and standardized audit coverage",
     ],
   },
   {
-    title: "Sales SKU agent",
-    tag: "Deployed at NiCE",
+    title: "Sales enablement agent",
+    tag: "In production at NiCE",
+    category: "production",
     summary:
       "Guides sales teams through hundreds of SKUs and compatible product combinations.",
     points: [
-      "Helps assemble the correct SKU suite",
-      "Reduces dependency on tribal knowledge",
+      "Assembles the correct SKU suite on demand",
+      "Removes dependency on tribal knowledge",
     ],
   },
   {
-    title: "Self-managed content studio",
-    tag: "Personal build",
+    title: "Multi-agent content platform",
+    tag: "Built and shipped solo",
+    category: "personal",
     summary:
-      "A production-style platform where eight orchestrated AI agents operate as a full marketing department.",
+      "Eight orchestrated agents running as a full department: strategy, production, analytics, and A/B.",
     points: [
-      "CMO orchestrator, reels, stories, long-form, analytics, and A/B agents",
-      "RAG-style versioned brand context, cost accounting, and an admin dashboard",
+      "RAG-style versioned context, cost accounting, admin dashboard",
+      "Proof he architects and ships multi-agent systems end to end",
     ],
   },
   {
-    title: "Multi-channel AI assistant",
-    tag: "Personal build",
+    title: "Multi-channel assistant",
+    tag: "Built and shipped solo",
+    category: "personal",
     summary:
-      "Customer-facing and private executive-assistant agents on WhatsApp and Telegram.",
+      "Tool-using agents on WhatsApp and Telegram with CRM, calendar, and email integration.",
     points: [
-      "CRM, booking, Google Calendar, and Gmail integrations",
-      "Lead intake, booking, reminders, follow-ups, and daily briefings",
+      "Lead intake, booking, reminders, follow-ups, daily briefings",
+      "Production integrations, not a demo",
     ],
   },
   {
-    title: "This interactive profile",
-    tag: "You are using it",
+    title: "This interview agent",
+    tag: "Built and shipped solo",
+    category: "personal",
     summary:
-      "A grounded interview agent built on a curated knowledge base with streaming responses and strict fact-grounding.",
+      "The grounded AI answering questions on this page - strict fact-grounding, streaming, no hallucination.",
     points: [
-      "Node.js, TypeScript, and the Claude API",
-      "Answers only from verified experience - and says so when it cannot",
+      "Node.js, TypeScript, the Claude API",
+      "Answers only from verified experience, and says so when it cannot",
     ],
   },
 ];
@@ -351,11 +390,15 @@ export const suggestedQuestions = [
   "Why did he leave NiCE?",
 ];
 
+// The one-line category claim - the thing only he can say.
+export const thesis =
+  "Most enterprises are still planning their AI. Shay has already put it into the core of IT operations, at 11,000-person scale, while running the whole global organization - and he builds it himself.";
+
 export const navItems = [
   { id: "impact", label: "Impact" },
-  { id: "overview", label: "Overview" },
-  { id: "transformation", label: "Transformations" },
   { id: "ai", label: "AI Systems" },
+  { id: "transformation", label: "Transformations" },
+  { id: "leadership", label: "Leadership" },
   { id: "interview", label: "Interview" },
   { id: "contact", label: "Contact" },
 ];
