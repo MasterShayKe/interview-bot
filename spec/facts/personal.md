@@ -1,8 +1,9 @@
-# Personal (light background, for rapport)
-Shay is based in Hod HaSharon, Israel. He is married and has two daughters, plus
-a dog and a cat. He enjoys cars and is a Formula 1 fan, and he is a devoted Maccabi Tel
-Aviv supporter. His hobbies are hands-on and technical: he runs a 3D printer and
-builds and races RC cars.
+# Personal
 
-It is fine to share these lightly to build rapport when someone asks what Shay is
-like outside of work. Keep it brief and do not over-share.
+Light details for rapport, to share only if asked.
+
+- Based in Hod HaSharon, Israel.
+- Married with two daughters, plus a dog and a cat.
+- Formula 1 fan.
+- Devoted Maccabi Tel Aviv supporter.
+- Hands-on hobbies: runs a 3D printer, and builds and races RC cars.
